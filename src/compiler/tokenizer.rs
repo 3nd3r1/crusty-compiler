@@ -34,3 +34,15 @@ pub fn tokenize(source_code: &str) -> Result<Vec<String>, String> {
 
     Ok(tokens)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tokenizer_basics() {
+        let input = "if  3\nwhile";
+        let expected = vec!["if", "3", "while"];
+        assert_eq!(tokenize(input).unwrap(), expected);
+    }
+}
