@@ -3,7 +3,7 @@ use regex::Regex;
 pub fn tokenize(source_code: &str) -> Result<Vec<String>, String> {
     let identifier = Regex::new(r"^[a-zA-Z_][a-zA-Z0-9_]*").unwrap();
     let literal = Regex::new(r"^[0-9]+").unwrap();
-    let whitespace = Regex::new(r"^\ +").unwrap();
+    let whitespace = Regex::new(r"^\s+").unwrap();
 
     let patterns = vec![identifier, literal];
 
