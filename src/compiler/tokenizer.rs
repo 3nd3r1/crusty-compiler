@@ -4,6 +4,8 @@ use regex::Regex;
 pub enum TokenKind {
     Identifier,
     IntLiteral,
+    Operator,
+    Punctutation,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -22,11 +24,17 @@ pub struct Token {
 pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
     let identifier = Regex::new(r"^[a-zA-Z_][a-zA-Z0-9_]*").unwrap();
     let literal = Regex::new(r"^[0-9]+").unwrap();
+    let operator = Regex::new(r"^(\=\=|\!\=|\<\=|\>\=|[\<\>\+\-\*\/\%\=])").unwrap();
+    let punctuation = Regex::new(r"^[\;\,\(\)\{\}]").unwrap();
+
+    let comment = Regex::new(r"^(\/\/|\#)[^\n]*").unwrap();
     let whitespace = Regex::new(r"^\s+").unwrap();
 
     let patterns = vec![
         (TokenKind::Identifier, identifier),
         (TokenKind::IntLiteral, literal),
+        (TokenKind::Operator, operator),
+        (TokenKind::Punctutation, punctuation),
     ];
 
     let mut remaining_code = source_code;
@@ -34,6 +42,10 @@ pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
 
     while !remaining_code.is_empty() {
         if let Some(matched) = whitespace.find(remaining_code) {
+            remaining_code = &remaining_code[matched.end()..];
+            continue;
+        }
+        if let Some(matched) = comment.find(remaining_code) {
             remaining_code = &remaining_code[matched.end()..];
             continue;
         }
