@@ -28,9 +28,11 @@ pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
     let punctuation = Regex::new(r"^[;,\(\){}]").unwrap();
 
     let comment = Regex::new(r"^(//|\#)[^\n]*").unwrap();
+    let multi_line_comment = Regex::new(r"^/\*[\s\S]*\*/").unwrap();
     let whitespace = Regex::new(r"^\s+").unwrap();
 
-    let patterns = vec![
+    let null_patterns = vec![comment, multi_line_comment, whitespace];
+    let token_patterns = vec![
         (TokenKind::Identifier, identifier),
         (TokenKind::IntLiteral, literal),
         (TokenKind::Operator, operator),
@@ -41,17 +43,20 @@ pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
 
     while !remaining_code.is_empty() {
-        if let Some(matched) = whitespace.find(remaining_code) {
-            remaining_code = &remaining_code[matched.end()..];
-            continue;
+        let mut null_match_found = false;
+        for pattern in &null_patterns {
+            if let Some(matched) = pattern.find(remaining_code) {
+                remaining_code = &remaining_code[matched.end()..];
+                null_match_found = true;
+                break;
+            }
         }
-        if let Some(matched) = comment.find(remaining_code) {
-            remaining_code = &remaining_code[matched.end()..];
+        if null_match_found {
             continue;
         }
 
-        let mut match_found = false;
-        for (token_kind, pattern) in &patterns {
+        let mut token_match_found = false;
+        for (token_kind, pattern) in &token_patterns {
             if let Some(matched) = pattern.find(remaining_code) {
                 let token = Token {
                     kind: token_kind.clone(),
@@ -60,12 +65,12 @@ pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
                 };
                 tokens.push(token);
                 remaining_code = &remaining_code[matched.end()..];
-                match_found = true;
+                token_match_found = true;
                 break;
             }
         }
 
-        if !match_found {
+        if !token_match_found {
             return Err("No match found".to_string());
         }
     }
