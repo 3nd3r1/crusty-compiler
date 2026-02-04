@@ -103,3 +103,39 @@ pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<ast::Expression, String> {
     let mut parser = Parser { tokens, pos: 0 };
     parser.parse_expression()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokenizer::tokenize;
+
+    fn lit(value: i32) -> Box<ast::Expression> {
+        Box::new(ast::Expression::Literal { value })
+    }
+
+    fn add(value_a: i32, value_b: i32) -> ast::Expression {
+        ast::Expression::BinaryOp {
+            left: lit(value_a),
+            right: lit(value_b),
+            op: ast::Operation::Addition,
+        }
+    }
+
+    fn sub(value_a: i32, value_b: i32) -> ast::Expression {
+        ast::Expression::BinaryOp {
+            left: lit(value_a),
+            right: lit(value_b),
+            op: ast::Operation::Substraction,
+        }
+    }
+
+    #[test]
+    fn test_parse_addition() {
+        assert_eq!(parse(tokenize("1+1").unwrap()).unwrap(), add(1, 1));
+    }
+
+    #[test]
+    fn test_parse_substraction() {
+        assert_eq!(parse(tokenize("1-1").unwrap()).unwrap(), sub(1, 1));
+    }
+}
