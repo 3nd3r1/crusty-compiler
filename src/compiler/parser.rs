@@ -55,6 +55,25 @@ impl Parser {
     }
 
     fn parse_term(&mut self) -> Result<ast::Expression, String> {
+        let mut left = self.parse_factor()?;
+
+        while self.peek().kind == tokenizer::TokenKind::Operator
+            && matches!(self.peek().text.as_str(), "*" | "/")
+        {
+            let operation = self.parse_operator()?;
+            let right = self.parse_factor()?;
+
+            left = ast::Expression::BinaryOp {
+                left: Box::new(left),
+                right: Box::new(right),
+                op: operation,
+            }
+        }
+
+        Ok(left)
+    }
+
+    fn parse_factor(&mut self) -> Result<ast::Expression, String> {
         match self.peek().kind {
             tokenizer::TokenKind::IntLiteral => return self.parse_int_literal(),
             tokenizer::TokenKind::Identifier => return self.parse_identifier(),
@@ -72,11 +91,10 @@ impl Parser {
         match token.text.as_str() {
             "+" => return Ok(ast::Operation::Addition),
             "-" => return Ok(ast::Operation::Substraction),
+            "*" => return Ok(ast::Operation::Multiplication),
+            "/" => return Ok(ast::Operation::Division),
             _ => {
-                return Err(format!(
-                    "{:?}: expected an integer or identifier",
-                    token.loc
-                ));
+                return Err(format!("{:?}: expected an operator", token.loc));
             }
         }
     }
@@ -84,7 +102,9 @@ impl Parser {
     fn parse_expression(&mut self) -> Result<ast::Expression, String> {
         let mut left = self.parse_term()?;
 
-        while self.peek().kind == tokenizer::TokenKind::Operator {
+        while self.peek().kind == tokenizer::TokenKind::Operator
+            && matches!(self.peek().text.as_str(), "+" | "-")
+        {
             let operation = self.parse_operator()?;
             let right = self.parse_term()?;
 
