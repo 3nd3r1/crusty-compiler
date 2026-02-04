@@ -93,11 +93,9 @@ mod tests {
     use TokenKind::*;
 
     fn tokenize_without_loc(source_code: &str) -> Vec<(TokenKind, String)> {
-        tokenize(source_code)
-            .unwrap()
-            .into_iter()
-            .map(|t| (t.kind, t.text))
-            .collect()
+        let mut tokens = tokenize(source_code).unwrap();
+        tokens.pop();
+        tokens.into_iter().map(|t| (t.kind, t.text)).collect()
     }
 
     #[test]
