@@ -128,11 +128,25 @@ impl Parser {
 
         Ok(left)
     }
+
+    fn parse(&mut self) -> Result<ast::Expression, String> {
+        let expression = self.parse_expression()?;
+
+        if self.peek().kind != tokenizer::TokenKind::End {
+            return Err(format!(
+                "{:?}: unexpected token {:?} expected end",
+                self.peek().loc,
+                self.peek().text
+            ));
+        }
+
+        Ok(expression)
+    }
 }
 
 pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<ast::Expression, String> {
     let mut parser = Parser { tokens, pos: 0 };
-    parser.parse_expression()
+    parser.parse()
 }
 
 #[cfg(test)]
@@ -142,6 +156,12 @@ mod tests {
 
     fn lit(value: i32) -> ast::Expression {
         ast::Expression::Literal { value }
+    }
+
+    fn ide(value: &str) -> ast::Expression {
+        ast::Expression::Identifier {
+            value: value.to_string(),
+        }
     }
 
     fn add(expression_a: ast::Expression, expression_b: ast::Expression) -> ast::Expression {
@@ -173,6 +193,15 @@ mod tests {
         assert_eq!(
             parse(tokenize("1-1").unwrap()).unwrap(),
             sub(lit(1), lit(1))
+        );
+    }
+
+    #[test]
+    fn test_parse_invalid() {
+        assert!(
+            parse(tokenize("a+b c").unwrap())
+                .unwrap_err()
+                .contains("unexpected token")
         );
     }
 
