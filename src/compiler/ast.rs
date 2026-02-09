@@ -35,4 +35,9 @@ pub enum Expression {
         then_expression: Box<Expression>,
         else_expression: Option<Box<Expression>>,
     },
+
+    FunctionCall {
+        name: String,
+        arguments: Vec<Expression>,
+    },
 }
