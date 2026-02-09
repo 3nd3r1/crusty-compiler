@@ -578,5 +578,12 @@ mod tests {
             parse(tokenize("1 + { 2 }").unwrap()).unwrap(),
             add(int(1), block(vec![int(2)]))
         );
+        assert_eq!(
+            parse(tokenize("x = { f(a); b }").unwrap()).unwrap(),
+            assignment(
+                ide("x"),
+                block(vec![function_call("f", vec![ide("a")]), ide("b")])
+            )
+        );
     }
 }
