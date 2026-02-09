@@ -369,6 +369,10 @@ mod tests {
         }
     }
 
+    fn block(expressions: Vec<ast::Expression>) -> ast::Expression {
+        ast::Expression::Block { expressions }
+    }
+
     #[test]
     fn test_parser_addition() {
         assert_eq!(
@@ -525,6 +529,38 @@ mod tests {
                 and(and(not(not(ide("a"))), ide("b")), ide("c")),
                 not(ide("b"))
             )
+        );
+    }
+
+    #[test]
+    fn test_parser_block() {
+        assert_eq!(
+            parse(tokenize("{ 1 }").unwrap()).unwrap(),
+            block(vec![int(1)])
+        );
+        assert_eq!(
+            parse(tokenize("{ 1; 2 }").unwrap()).unwrap(),
+            block(vec![int(1), int(2)])
+        );
+        assert_eq!(
+            parse(tokenize("{ 1; 2; 3 }").unwrap()).unwrap(),
+            block(vec![int(1), int(2), int(3)])
+        );
+        assert_eq!(
+            parse(tokenize("{ a = 1; b = 2; a + b }").unwrap()).unwrap(),
+            block(vec![
+                assignment(ide("a"), int(1)),
+                assignment(ide("b"), int(2)),
+                add(ide("a"), ide("b"))
+            ])
+        );
+        assert_eq!(
+            parse(tokenize("{ { 1 } }").unwrap()).unwrap(),
+            block(vec![block(vec![int(1)])])
+        );
+        assert_eq!(
+            parse(tokenize("1 + { 2 }").unwrap()).unwrap(),
+            add(int(1), block(vec![int(2)]))
         );
     }
 }
