@@ -142,10 +142,17 @@ impl Parser {
     }
 
     fn parse_identifier(&mut self) -> Result<ast::Expression, String> {
-        let token = self.consume(tokenizer::TokenKind::Identifier, None)?;
-        Ok(ast::Expression::Identifier {
-            value: token.text.clone(),
-        })
+        let name = self
+            .consume(tokenizer::TokenKind::Identifier, None)?
+            .text
+            .clone();
+
+        if self.peek().kind == tokenizer::TokenKind::Punctuation && self.peek().text.as_str() == "("
+        {
+            return self.parse_function_call(name);
+        }
+
+        Ok(ast::Expression::Identifier { value: name })
     }
 
     fn parse_bool_literal(&mut self) -> Result<ast::Expression, String> {
@@ -187,6 +194,23 @@ impl Parser {
             then_expression: Box::new(then_expression),
             else_expression: else_expression.map(Box::new),
         })
+    }
+
+    fn parse_function_call(&mut self, name: String) -> Result<ast::Expression, String> {
+        self.consume(tokenizer::TokenKind::Punctuation, Some("("))?;
+
+        let mut arguments: Vec<ast::Expression> = vec![];
+        if self.peek().text != ")" {
+            loop {
+                arguments.push(self.parse_expression()?);
+                if self.peek().text != "," {
+                    break;
+                }
+            }
+        }
+        self.consume(tokenizer::TokenKind::Punctuation, Some(")"))?;
+
+        Ok(ast::Expression::FunctionCall { name, arguments })
     }
 
     fn parse_operator(&mut self) -> Result<ast::Operation, String> {
