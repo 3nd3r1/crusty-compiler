@@ -205,6 +205,8 @@ impl Parser {
                 arguments.push(self.parse_expression()?);
                 if self.peek().text != "," {
                     break;
+                } else {
+                    self.consume(tokenizer::TokenKind::Punctuation, Some(","))?;
                 }
             }
         }
