@@ -64,4 +64,8 @@ pub enum Expression {
         condition: Box<Expression>,
         do_expression: Box<Expression>,
     },
+    VarDeclaration {
+        name: String,
+        value: Box<Expression>,
+    },
 }
