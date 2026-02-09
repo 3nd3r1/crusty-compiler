@@ -53,7 +53,7 @@ pub enum Expression {
         arguments: Vec<Expression>,
     },
     Assignment {
-        name: String,
-        value: Box<Expression>,
+        left: Box<Expression>,
+        right: Box<Expression>,
     },
 }
