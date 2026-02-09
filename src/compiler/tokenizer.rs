@@ -25,7 +25,7 @@ pub struct Token {
 }
 
 pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
-    let keyword = Regex::new(r"^(if|else|while|then|do|not)\b").unwrap();
+    let keyword = Regex::new(r"^(if|else|while|then|do|not|var)\b").unwrap();
     let int_literal = Regex::new(r"^[0-9]+").unwrap();
     let bool_literal = Regex::new(r"^(true|false)\b").unwrap();
     let operator = Regex::new(r"^(or\b|and\b|==|!=|<=|>=|[-<>+*/%=])").unwrap();
