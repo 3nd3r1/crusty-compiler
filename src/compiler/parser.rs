@@ -199,6 +199,11 @@ mod tests {
     #[test]
     fn test_parse_invalid() {
         assert!(
+            parse(tokenize("").unwrap())
+                .unwrap_err()
+                .contains("expected an integer, identifier or '('"),
+        );
+        assert!(
             parse(tokenize("a+b c").unwrap())
                 .unwrap_err()
                 .contains("unexpected token")
