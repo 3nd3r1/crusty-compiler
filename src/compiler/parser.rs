@@ -207,19 +207,27 @@ mod tests {
         }
     }
 
-    fn add(expression_a: ast::Expression, expression_b: ast::Expression) -> ast::Expression {
-        ast::Expression::BinaryOp {
-            left: Box::new(expression_a),
-            right: Box::new(expression_b),
-            op: ast::Operation::Addition,
-        }
+    fn add(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+        binaryop(left, right, ast::Operation::Addition)
     }
 
-    fn sub(expression_a: ast::Expression, expression_b: ast::Expression) -> ast::Expression {
+    fn sub(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+        binaryop(left, right, ast::Operation::Substraction)
+    }
+
+    fn lt(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+        binaryop(left, right, ast::Operation::LessThan)
+    }
+
+    fn binaryop(
+        left: ast::Expression,
+        right: ast::Expression,
+        op: ast::Operation,
+    ) -> ast::Expression {
         ast::Expression::BinaryOp {
-            left: Box::new(expression_a),
-            right: Box::new(expression_b),
-            op: ast::Operation::Substraction,
+            left: Box::new(left),
+            right: Box::new(right),
+            op,
         }
     }
 
@@ -252,11 +260,19 @@ mod tests {
     }
 
     #[test]
+    fn test_parser_comparison() {
+        assert_eq!(
+            parse(tokenize("a<2").unwrap()).unwrap(),
+            lt(ide("a"), int(2))
+        );
+    }
+
+    #[test]
     fn test_parser_invalid() {
         assert!(
             parse(tokenize("").unwrap())
                 .unwrap_err()
-                .contains("expected an integer, identifier or '('"),
+                .contains("expected a literal, identifier or '('"),
         );
         assert!(
             parse(tokenize("a+b c").unwrap())
