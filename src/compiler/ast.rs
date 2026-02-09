@@ -8,8 +8,11 @@ pub enum Operation {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
-    Literal {
+    IntLiteral {
         value: i32,
+    },
+    BoolLiteral {
+        value: bool,
     },
     Identifier {
         value: String,
@@ -18,5 +21,11 @@ pub enum Expression {
         left: Box<Expression>,
         right: Box<Expression>,
         op: Operation,
+    },
+
+    If {
+        condition: Box<Expression>,
+        then_expression: Box<Expression>,
+        else_expression: Box<Expression>,
     },
 }
