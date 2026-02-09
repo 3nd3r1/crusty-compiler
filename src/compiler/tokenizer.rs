@@ -104,80 +104,70 @@ mod tests {
         tokens.into_iter().map(|t| (t.kind, t.text)).collect()
     }
 
+    fn bool(value: &str) -> (TokenKind, String) {
+        (BoolLiteral, value.into())
+    }
+
+    fn int(value: &str) -> (TokenKind, String) {
+        (IntLiteral, value.into())
+    }
+
+    fn ide(value: &str) -> (TokenKind, String) {
+        (Identifier, value.into())
+    }
+
+    fn keyw(value: &str) -> (TokenKind, String) {
+        (Keyword, value.into())
+    }
+
+    fn ope(value: &str) -> (TokenKind, String) {
+        (Operator, value.into())
+    }
+
+    fn punc(value: &str) -> (TokenKind, String) {
+        (Punctuation, value.into())
+    }
+
     #[test]
     fn test_tokenizer_basics() {
         assert_eq!(
             tokenize_without_loc("if  3\nwhile"),
-            vec![
-                (Keyword, "if".into()),
-                (IntLiteral, "3".into()),
-                (Keyword, "while".into())
-            ]
+            vec![keyw("if"), int("3"), keyw("while")]
         );
         assert_eq!(
             tokenize_without_loc("if true then 1 else 0"),
             vec![
-                (Keyword, "if".into()),
-                (BoolLiteral, "true".into()),
-                (Keyword, "then".into()),
-                (IntLiteral, "1".into()),
-                (Keyword, "else".into()),
-                (IntLiteral, "0".into()),
+                keyw("if"),
+                bool("true"),
+                keyw("then"),
+                int("1"),
+                keyw("else"),
+                int("0"),
             ]
         );
     }
 
     #[test]
     fn test_tokenizer_valid_identifiers() {
-        assert_eq!(
-            tokenize_without_loc("hello"),
-            vec![(Identifier, "hello".into())]
-        );
-        assert_eq!(
-            tokenize_without_loc("HELLO"),
-            vec![(Identifier, "HELLO".into())]
-        );
-        assert_eq!(
-            tokenize_without_loc("hEl_LO"),
-            vec![(Identifier, "hEl_LO".into())]
-        );
-        assert_eq!(
-            tokenize_without_loc("__hello"),
-            vec![(Identifier, "__hello".into())]
-        );
-        assert_eq!(
-            tokenize_without_loc("_hEl_LO"),
-            vec![(Identifier, "_hEl_LO".into())]
-        );
-        assert_eq!(
-            tokenize_without_loc("_hE12lLO"),
-            vec![(Identifier, "_hE12lLO".into())]
-        );
+        assert_eq!(tokenize_without_loc("hello"), vec![ide("hello")]);
+        assert_eq!(tokenize_without_loc("HELLO"), vec![ide("HELLO")]);
+        assert_eq!(tokenize_without_loc("hEl_LO"), vec![ide("hEl_LO")]);
+        assert_eq!(tokenize_without_loc("__hello"), vec![ide("__hello")]);
+        assert_eq!(tokenize_without_loc("_hEl_LO"), vec![ide("_hEl_LO")]);
+        assert_eq!(tokenize_without_loc("_hE12lLO"), vec![ide("_hE12lLO")]);
     }
 
     #[test]
     fn test_tokenizer_literals() {
-        assert_eq!(tokenize_without_loc("0"), vec![(IntLiteral, "0".into())]);
-        assert_eq!(
-            tokenize_without_loc("123"),
-            vec![(IntLiteral, "123".into())]
-        );
+        assert_eq!(tokenize_without_loc("0"), vec![int("0")]);
+        assert_eq!(tokenize_without_loc("123"), vec![int("123")]);
         assert_eq!(
             tokenize_without_loc("123 123  11"),
-            vec![
-                (IntLiteral, "123".into()),
-                (IntLiteral, "123".into()),
-                (IntLiteral, "11".into())
-            ]
+            vec![int("123"), int("123"), int("11")]
         );
         assert_eq!(
             tokenize_without_loc("000 123 123  11"),
-            vec![
-                (IntLiteral, "000".into()),
-                (IntLiteral, "123".into()),
-                (IntLiteral, "123".into()),
-                (IntLiteral, "11".into())
-            ]
+            vec![int("000"), int("123"), int("123"), int("11")]
         );
     }
 
@@ -185,12 +175,7 @@ mod tests {
     fn test_tokenizer_whitespace() {
         assert_eq!(
             tokenize_without_loc("moi  miten\n menee\t sulla"),
-            vec![
-                (Identifier, "moi".into()),
-                (Identifier, "miten".into()),
-                (Identifier, "menee".into()),
-                (Identifier, "sulla".into())
-            ]
+            vec![ide("moi"), ide("miten"), ide("menee"), ide("sulla")]
         );
     }
 
@@ -204,73 +189,44 @@ mod tests {
 
     #[test]
     fn test_tokenizer_operators() {
-        assert_eq!(tokenize_without_loc("+"), vec![(Operator, "+".into()),]);
-        assert_eq!(tokenize_without_loc("<="), vec![(Operator, "<=".into()),]);
-        assert_eq!(
-            tokenize_without_loc("+-"),
-            vec![(Operator, "+".into()), (Operator, "-".into()),]
-        );
-        assert_eq!(
-            tokenize_without_loc("<<"),
-            vec![(Operator, "<".into()), (Operator, "<".into()),]
-        );
+        assert_eq!(tokenize_without_loc("+"), vec![ope("+")]);
+        assert_eq!(tokenize_without_loc("<="), vec![ope("<=")]);
+        assert_eq!(tokenize_without_loc("+-"), vec![ope("+"), ope("-")]);
+        assert_eq!(tokenize_without_loc("<<"), vec![ope("<"), ope("<")]);
         assert_eq!(
             tokenize_without_loc("+-<<=>="),
-            vec![
-                (Operator, "+".into()),
-                (Operator, "-".into()),
-                (Operator, "<".into()),
-                (Operator, "<=".into()),
-                (Operator, ">=".into())
-            ]
+            vec![ope("+"), ope("-"), ope("<"), ope("<="), ope(">=")]
         );
         assert_eq!(
             tokenize_without_loc("1+1=2"),
-            vec![
-                (IntLiteral, "1".into()),
-                (Operator, "+".into()),
-                (IntLiteral, "1".into()),
-                (Operator, "=".into()),
-                (IntLiteral, "2".into()),
-            ]
+            vec![int("1"), ope("+"), int("1"), ope("="), int("2")]
+        );
+        assert_eq!(
+            tokenize_without_loc("true or false"),
+            vec![bool("true"), ope("or"), bool("false")]
         );
     }
 
     #[test]
     fn test_tokenizer_punctuation() {
-        assert_eq!(tokenize_without_loc(","), vec![(Punctuation, ",".into()),]);
-        assert_eq!(
-            tokenize_without_loc(";;"),
-            vec![(Punctuation, ";".into()), (Punctuation, ";".into())]
-        );
-        assert_eq!(
-            tokenize_without_loc("{}"),
-            vec![(Punctuation, "{".into()), (Punctuation, "}".into()),]
-        );
-        assert_eq!(
-            tokenize_without_loc("()"),
-            vec![(Punctuation, "(".into()), (Punctuation, ")".into()),]
-        );
+        assert_eq!(tokenize_without_loc(","), vec![punc(",")]);
+        assert_eq!(tokenize_without_loc(";;"), vec![punc(";"), punc(";")]);
+        assert_eq!(tokenize_without_loc("{}"), vec![punc("{"), punc("}")]);
+        assert_eq!(tokenize_without_loc("()"), vec![punc("("), punc(")")]);
         assert_eq!(
             tokenize_without_loc("(){,;}"),
             vec![
-                (Punctuation, "(".into()),
-                (Punctuation, ")".into()),
-                (Punctuation, "{".into()),
-                (Punctuation, ",".into()),
-                (Punctuation, ";".into()),
-                (Punctuation, "}".into())
+                punc("("),
+                punc(")"),
+                punc("{"),
+                punc(","),
+                punc(";"),
+                punc("}")
             ]
         );
         assert_eq!(
             tokenize_without_loc("1+1=2"),
-            vec![
-                (IntLiteral, "1".into()),
-                (Operator, "+".into()),
-                (IntLiteral, "1".into()),
-                (Operator, "=".into()),
-                (IntLiteral, "2".into()),
-            ]
+            vec![int("1"), ope("+"), int("1"), ope("="), int("2")]
         );
     }
 
@@ -281,26 +237,26 @@ mod tests {
         assert_eq!(tokenize_without_loc("/* hello */"), vec![]);
         assert_eq!(
             tokenize_without_loc("hello # hello hello"),
-            vec![(Identifier, "hello".into())]
+            vec![ide("hello")]
         );
         assert_eq!(
             tokenize_without_loc("hello # hello hello\n 1"),
-            vec![(Identifier, "hello".into()), (IntLiteral, "1".into()),]
+            vec![ide("hello"), int("1")]
         );
         assert_eq!(
             tokenize_without_loc("hello 1 # this is a comment\n a=2 // comment # comment\n 2"),
             vec![
-                (Identifier, "hello".into()),
-                (IntLiteral, "1".into()),
-                (Identifier, "a".into()),
-                (Operator, "=".into()),
-                (IntLiteral, "2".into()),
-                (IntLiteral, "2".into()),
+                ide("hello"),
+                int("1"),
+                ide("a"),
+                ope("="),
+                int("2"),
+                int("2")
             ]
         );
         assert_eq!(
             tokenize_without_loc("hello /* hello\n hi=1 */ 1"),
-            vec![(Identifier, "hello".into()), (IntLiteral, "1".into()),]
+            vec![ide("hello"), int("1")]
         );
     }
 
@@ -311,21 +267,21 @@ mod tests {
                 "moi1 123  hello 23 21 _var1 //this is a comment\n if 23 == 23 /* this\n is\n a multi-line comment */ 1+a=32"
             ),
             vec![
-                (Identifier, "moi1".into()),
-                (IntLiteral, "123".into()),
-                (Identifier, "hello".into()),
-                (IntLiteral, "23".into()),
-                (IntLiteral, "21".into()),
-                (Identifier, "_var1".into()),
-                (Keyword, "if".into()),
-                (IntLiteral, "23".into()),
-                (Operator, "==".into()),
-                (IntLiteral, "23".into()),
-                (IntLiteral, "1".into()),
-                (Operator, "+".into()),
-                (Identifier, "a".into()),
-                (Operator, "=".into()),
-                (IntLiteral, "32".into())
+                ide("moi1"),
+                int("123"),
+                ide("hello"),
+                int("23"),
+                int("21"),
+                ide("_var1"),
+                keyw("if"),
+                int("23"),
+                ope("=="),
+                int("23"),
+                int("1"),
+                ope("+"),
+                ide("a"),
+                ope("="),
+                int("32")
             ]
         );
     }
