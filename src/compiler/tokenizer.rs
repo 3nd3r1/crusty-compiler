@@ -5,8 +5,8 @@ pub enum TokenKind {
     Keyword,
     IntLiteral,
     BoolLiteral,
-    Identifier,
     Operator,
+    Identifier,
     Punctuation,
     End,
 }
@@ -28,8 +28,8 @@ pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
     let keyword = Regex::new(r"^(if|else|while|then|do)\b").unwrap();
     let int_literal = Regex::new(r"^[0-9]+").unwrap();
     let bool_literal = Regex::new(r"^(true|false)\b").unwrap();
+    let operator = Regex::new(r"^(or\b|and\b|==|!=|<=|>=|[-<>+*/%=])").unwrap();
     let identifier = Regex::new(r"^[a-zA-Z_][a-zA-Z0-9_]*").unwrap();
-    let operator = Regex::new(r"^(==|!=|<=|>=|[-<>+*/%=])").unwrap();
     let punctuation = Regex::new(r"^[;,\(\){}]").unwrap();
 
     let comment = Regex::new(r"^(//|\#)[^\n]*").unwrap();
@@ -41,8 +41,8 @@ pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
         (TokenKind::Keyword, keyword),
         (TokenKind::IntLiteral, int_literal),
         (TokenKind::BoolLiteral, bool_literal),
-        (TokenKind::Identifier, identifier),
         (TokenKind::Operator, operator),
+        (TokenKind::Identifier, identifier),
         (TokenKind::Punctuation, punctuation),
     ];
 
