@@ -39,7 +39,7 @@ impl Parser {
     }
 
     fn parse(&mut self) -> Result<ast::Expression, String> {
-        let expression = self.parse_binary_operation(0)?;
+        let expression = self.parse_expression()?;
 
         if self.peek().kind != tokenizer::TokenKind::End {
             return Err(format!(
@@ -50,6 +50,24 @@ impl Parser {
         }
 
         Ok(expression)
+    }
+
+    fn parse_expression(&mut self) -> Result<ast::Expression, String> {
+        self.parse_assignment()
+    }
+
+    fn parse_assignment(&mut self) -> Result<ast::Expression, String> {
+        let left = self.parse_binary_operation(0)?;
+        if self.peek().kind == tokenizer::TokenKind::Operator && self.peek().text.as_str() == "=" {
+            self.consume(tokenizer::TokenKind::Operator, Some("="))?;
+            let right = self.parse_assignment()?;
+
+            return Ok(ast::Expression::Assignment {
+                left: Box::new(left),
+                right: Box::new(right),
+            });
+        }
+        Ok(left)
     }
 
     fn parse_binary_operation(&mut self, level: usize) -> Result<ast::Expression, String> {
@@ -133,7 +151,7 @@ impl Parser {
 
     fn parse_parenthesized(&mut self) -> Result<ast::Expression, String> {
         self.consume(tokenizer::TokenKind::Punctuation, Some("("))?;
-        let expression = self.parse_binary_operation(0)?;
+        let expression = self.parse_expression()?;
         self.consume(tokenizer::TokenKind::Punctuation, Some(")"))?;
 
         Ok(expression)
@@ -141,16 +159,16 @@ impl Parser {
 
     fn parse_if(&mut self) -> Result<ast::Expression, String> {
         self.consume(tokenizer::TokenKind::Keyword, Some("if"))?;
-        let condition = self.parse_binary_operation(0)?;
+        let condition = self.parse_expression()?;
         self.consume(tokenizer::TokenKind::Keyword, Some("then"))?;
-        let then_expression = self.parse_binary_operation(0)?;
+        let then_expression = self.parse_expression()?;
 
         let else_expression: Option<ast::Expression> = if self.peek().kind
             == tokenizer::TokenKind::Keyword
             && self.peek().text.as_str() == "else"
         {
             self.consume(tokenizer::TokenKind::Keyword, Some("else"))?;
-            Some(self.parse_binary_operation(0)?)
+            Some(self.parse_expression()?)
         } else {
             None
         };
@@ -168,7 +186,7 @@ impl Parser {
         let mut arguments: Vec<ast::Expression> = vec![];
         if self.peek().text != ")" {
             loop {
-                arguments.push(self.parse_binary_operation(0)?);
+                arguments.push(self.parse_expression()?);
                 if self.peek().text != "," {
                     break;
                 } else {
