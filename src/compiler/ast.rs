@@ -4,6 +4,7 @@ pub enum Operation {
     Substraction,
     Multiplication,
     Division,
+    Modulo,
 
     LessThan,
     GreaterThan,
@@ -11,6 +12,9 @@ pub enum Operation {
     NotEqual,
     LessThanOrEqual,
     GreaterThanOrEqual,
+
+    Or,
+    And,
 }
 
 #[derive(Debug, Clone, PartialEq)]
