@@ -408,6 +408,13 @@ mod tests {
         ast::Expression::Block { expressions }
     }
 
+    fn while_do(condition: ast::Expression, do_expression: ast::Expression) -> ast::Expression {
+        ast::Expression::While {
+            condition: Box::new(condition),
+            do_expression: Box::new(do_expression),
+        }
+    }
+
     #[test]
     fn test_parser_addition() {
         assert_eq!(
@@ -437,7 +444,7 @@ mod tests {
         assert!(
             parse(tokenize("").unwrap())
                 .unwrap_err()
-                .contains("{:?}: expected a literal, identifier, '(', 'if', '{{' or 'while' got {:?}"),
+                .contains("expected a literal, identifier, '(', 'if', '{' or 'while' got"),
         );
         assert!(
             parse(tokenize("a+b c").unwrap())
@@ -603,6 +610,48 @@ mod tests {
                 ide("x"),
                 block(vec![function_call("f", vec![ide("a")]), ide("b")])
             )
+        );
+        assert_eq!(
+            parse(
+                tokenize(
+                    "{
+                        while f() do {
+                            x = 10;
+                            y = if g(x) then {
+                                x = x + 1;
+                                x
+                            } else {
+                                g(x)
+                            };
+                            g(y)
+                        };
+                        123
+                    }"
+                )
+                .unwrap()
+            )
+            .unwrap(),
+            block(vec![
+                while_do(
+                    function_call("f", vec![]),
+                    block(vec![
+                        assignment(ide("x"), int(10)),
+                        assignment(
+                            ide("y"),
+                            if_then_else(
+                                function_call("g", vec![ide("x")]),
+                                block(vec![
+                                    assignment(ide("x"), add(ide("x"), int(1))),
+                                    ide("x")
+                                ]),
+                                Some(block(vec![function_call("g", vec![ide("x")])]))
+                            )
+                        ),
+                        function_call("g", vec![ide("y")])
+                    ])
+                ),
+                int(123)
+            ])
         );
     }
 }
