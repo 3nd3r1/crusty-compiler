@@ -188,12 +188,15 @@ impl Parser {
             "-" => return Ok(ast::Operation::Substraction),
             "*" => return Ok(ast::Operation::Multiplication),
             "/" => return Ok(ast::Operation::Division),
+            "%" => return Ok(ast::Operation::Modulo),
             "<" => return Ok(ast::Operation::LessThan),
             ">" => return Ok(ast::Operation::GreaterThan),
             "==" => return Ok(ast::Operation::Equal),
             "!=" => return Ok(ast::Operation::NotEqual),
             "<=" => return Ok(ast::Operation::LessThanOrEqual),
             ">=" => return Ok(ast::Operation::GreaterThanOrEqual),
+            "or" => return Ok(ast::Operation::Or),
+            "and" => return Ok(ast::Operation::And),
             _ => {
                 return Err(format!("{:?}: expected an operator", token.loc));
             }
