@@ -119,6 +119,9 @@ impl Parser {
             tokenizer::TokenKind::Punctuation if self.peek().text.as_str() == "(" => {
                 return self.parse_parenthesized();
             }
+            tokenizer::TokenKind::Keyword if self.peek().text.as_str() == "if" => {
+                return self.parse_if();
+            }
             _ => {
                 return Err(format!(
                     "{:?}: expected a literal, identifier or '('",
@@ -161,6 +164,29 @@ impl Parser {
         self.consume(tokenizer::TokenKind::Punctuation, Some(")"))?;
 
         Ok(expression)
+    }
+
+    fn parse_if(&mut self) -> Result<ast::Expression, String> {
+        self.consume(tokenizer::TokenKind::Keyword, Some("if"))?;
+        let condition = self.parse_comparison()?;
+        self.consume(tokenizer::TokenKind::Keyword, Some("then"))?;
+        let then_expression = self.parse_expression()?;
+
+        let else_expression: Option<ast::Expression> = if self.peek().kind
+            == tokenizer::TokenKind::Keyword
+            && self.peek().text.as_str() == "else"
+        {
+            self.consume(tokenizer::TokenKind::Keyword, Some("else"))?;
+            Some(self.parse_expression()?)
+        } else {
+            None
+        };
+
+        Ok(ast::Expression::If {
+            condition: Box::new(condition),
+            then_expression: Box::new(then_expression),
+            else_expression: else_expression.map(Box::new),
+        })
     }
 
     fn parse_operator(&mut self) -> Result<ast::Operation, String> {
@@ -234,12 +260,12 @@ mod tests {
     fn if_then_else(
         condition: ast::Expression,
         then_expression: ast::Expression,
-        else_expression: ast::Expression,
+        else_expression: Option<ast::Expression>,
     ) -> ast::Expression {
         ast::Expression::If {
             condition: Box::new(condition),
             then_expression: Box::new(then_expression),
-            else_expression: Box::new(else_expression),
+            else_expression: else_expression.map(Box::new),
         }
     }
 
@@ -305,7 +331,7 @@ mod tests {
     fn test_parser_if_statement() {
         assert_eq!(
             parse(tokenize("if true then 1 else 0").unwrap()).unwrap(),
-            if_then_else(bool(true), int(1), int(0))
+            if_then_else(bool(true), int(1), Some(int(0)))
         );
     }
 }
