@@ -106,10 +106,17 @@ impl Parser {
             tokenizer::TokenKind::Keyword if self.peek().text.as_str() == "if" => {
                 return self.parse_if();
             }
+            tokenizer::TokenKind::Keyword if self.peek().text.as_str() == "not" => {
+                return self.parse_unary();
+            }
+            tokenizer::TokenKind::Operator if self.peek().text.as_str() == "-" => {
+                return self.parse_unary();
+            }
             _ => {
                 return Err(format!(
-                    "{:?}: expected a literal, identifier or '('",
-                    self.peek().loc
+                    "{:?}: expected a literal, identifier, '(', 'if', 'not' or '-' got {:?}",
+                    self.peek().loc,
+                    self.peek().text
                 ));
             }
         }
@@ -180,6 +187,16 @@ impl Parser {
         })
     }
 
+    fn parse_unary(&mut self) -> Result<ast::Expression, String> {
+        let operation = self.parse_unary_operation()?;
+        let operand = self.parse_factor()?;
+
+        Ok(ast::Expression::UnaryOp {
+            operand: Box::new(operand),
+            op: operation,
+        })
+    }
+
     fn parse_function_call(&mut self, name: String) -> Result<ast::Expression, String> {
         self.consume(tokenizer::TokenKind::Punctuation, Some("("))?;
 
@@ -217,6 +234,18 @@ impl Parser {
             "and" => return Ok(ast::Operation::And),
             _ => {
                 return Err(format!("{:?}: expected an operator", token.loc));
+            }
+        }
+    }
+
+    fn parse_unary_operation(&mut self) -> Result<ast::UnaryOperation, String> {
+        let token = self.consume(self.peek().kind.clone(), None)?;
+
+        match token.text.as_str() {
+            "-" => return Ok(ast::UnaryOperation::Neg),
+            "not" => return Ok(ast::UnaryOperation::Not),
+            _ => {
+                return Err(format!("{:?}: expected '-' or 'not'", token.loc));
             }
         }
     }
@@ -369,7 +398,7 @@ mod tests {
         assert!(
             parse(tokenize("").unwrap())
                 .unwrap_err()
-                .contains("expected a literal, identifier or '('"),
+                .contains("expected a literal, identifier, '(', 'if', 'not' or '-'"),
         );
         assert!(
             parse(tokenize("a+b c").unwrap())
