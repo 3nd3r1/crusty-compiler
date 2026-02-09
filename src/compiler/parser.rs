@@ -39,7 +39,7 @@ impl Parser {
 
     fn parse_int_literal(&mut self) -> Result<ast::Expression, String> {
         let token = self.consume(tokenizer::TokenKind::IntLiteral, None)?;
-        Ok(ast::Expression::Literal {
+        Ok(ast::Expression::IntLiteral {
             value: token
                 .text
                 .parse::<i32>()
@@ -154,8 +154,12 @@ mod tests {
     use super::*;
     use tokenizer::tokenize;
 
-    fn lit(value: i32) -> ast::Expression {
-        ast::Expression::Literal { value }
+    fn int(value: i32) -> ast::Expression {
+        ast::Expression::IntLiteral { value }
+    }
+
+    fn bool(value: bool) -> ast::Expression {
+        ast::Expression::BoolLiteral { value }
     }
 
     fn ide(value: &str) -> ast::Expression {
@@ -180,11 +184,23 @@ mod tests {
         }
     }
 
+    fn if_then_else(
+        condition: ast::Expression,
+        then_expression: ast::Expression,
+        else_expression: ast::Expression,
+    ) -> ast::Expression {
+        ast::Expression::If {
+            condition: Box::new(condition),
+            then_expression: Box::new(then_expression),
+            else_expression: Box::new(else_expression),
+        }
+    }
+
     #[test]
     fn test_parse_addition() {
         assert_eq!(
             parse(tokenize("1+1").unwrap()).unwrap(),
-            add(lit(1), lit(1))
+            add(int(1), int(1))
         );
     }
 
@@ -192,7 +208,7 @@ mod tests {
     fn test_parse_substraction() {
         assert_eq!(
             parse(tokenize("1-1").unwrap()).unwrap(),
-            sub(lit(1), lit(1))
+            sub(int(1), int(1))
         );
     }
 
@@ -214,7 +230,7 @@ mod tests {
     fn test_parse_associativity() {
         assert_eq!(
             parse(tokenize("1-2+3").unwrap()).unwrap(),
-            add(sub(lit(1), lit(2)), lit(3))
+            add(sub(int(1), int(2)), int(3))
         );
     }
 
@@ -222,11 +238,19 @@ mod tests {
     fn test_parse_paranthesis() {
         assert_eq!(
             parse(tokenize("1-(2+3)").unwrap()).unwrap(),
-            sub(lit(1), add(lit(2), lit(3)))
+            sub(int(1), add(int(2), int(3)))
         );
         assert_eq!(
             parse(tokenize("(1-(2+2))+1").unwrap()).unwrap(),
-            add(sub(lit(1), add(lit(2), lit(2))), lit(1))
+            add(sub(int(1), add(int(2), int(2))), int(1))
+        );
+    }
+
+    #[test]
+    fn test_parse_if_statement() {
+        assert_eq!(
+            parse(tokenize("if true then 1 else 0").unwrap()).unwrap(),
+            if_then_else(bool(true), int(1), int(0))
         );
     }
 }
