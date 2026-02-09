@@ -213,6 +213,10 @@ impl Parser {
                 break;
             } else {
                 self.consume(tokenizer::TokenKind::Punctuation, Some(";"))?;
+                if self.peek().text.as_str() == "}" {
+                    expressions.push(ast::Expression::NoneLiteral);
+                    break;
+                }
             }
         }
         self.consume(tokenizer::TokenKind::Punctuation, Some("}"))?;
