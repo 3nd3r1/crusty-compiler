@@ -43,17 +43,52 @@ impl Parser {
     }
 
     fn parse(&mut self) -> Result<ast::Expression, String> {
-        let expression = self.parse_expression()?;
+        let mut expressions = vec![];
+
+        while self.peek().kind != tokenizer::TokenKind::End {
+            if self.peek().kind == tokenizer::TokenKind::Keyword
+                && self.peek().text.as_str() == "var"
+            {
+                expressions.push(self.parse_var_declaration()?);
+            } else {
+                expressions.push(self.parse_expression()?);
+            }
+
+            if self.peek().text != ";" {
+                break;
+            } else {
+                self.consume(tokenizer::TokenKind::Punctuation, Some(";"))?;
+            }
+        }
 
         if self.peek().kind != tokenizer::TokenKind::End {
             return Err(format!(
-                "{:?}: unexpected token {:?} expected end",
+                "{:?}: expected End got {:?}",
                 self.peek().loc,
-                self.peek().text
+                self.peek().kind
             ));
         }
 
-        Ok(expression)
+        if expressions.len() == 1 {
+            return Ok(expressions.into_iter().next().unwrap());
+        } else {
+            return Ok(ast::Expression::Block { expressions });
+        }
+    }
+
+    fn parse_var_declaration(&mut self) -> Result<ast::Expression, String> {
+        self.consume(tokenizer::TokenKind::Keyword, Some("var"))?;
+        let name = self
+            .consume(tokenizer::TokenKind::Identifier, None)?
+            .text
+            .clone();
+        self.consume(tokenizer::TokenKind::Operator, Some("="))?;
+        let value = self.parse_expression()?;
+
+        Ok(ast::Expression::VarDeclaration {
+            name,
+            value: Box::new(value),
+        })
     }
 
     fn parse_expression(&mut self) -> Result<ast::Expression, String> {
@@ -208,7 +243,13 @@ impl Parser {
         self.consume(tokenizer::TokenKind::Punctuation, Some("{"))?;
         let mut expressions: Vec<ast::Expression> = vec![];
         loop {
-            expressions.push(self.parse_expression()?);
+            if self.peek().kind == tokenizer::TokenKind::Keyword
+                && self.peek().text.as_str() == "var"
+            {
+                expressions.push(self.parse_var_declaration()?);
+            } else {
+                expressions.push(self.parse_expression()?);
+            }
             if self.peek().text != ";" {
                 break;
             } else {
@@ -449,15 +490,11 @@ mod tests {
 
     #[test]
     fn test_parser_invalid() {
-        assert!(
-            parse(tokenize("").unwrap())
-                .unwrap_err()
-                .contains("expected a literal, identifier, '(', 'if', '{' or 'while' got"),
-        );
+        assert_eq!(parse(tokenize("").unwrap()).unwrap(), block(vec![]));
         assert!(
             parse(tokenize("a+b c").unwrap())
                 .unwrap_err()
-                .contains("unexpected token")
+                .contains("expected End got Identifier")
         );
         assert!(
             parse(tokenize("{ 1 a }").unwrap())
