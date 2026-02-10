@@ -464,6 +464,13 @@ mod tests {
         }
     }
 
+    fn var_decl(name: &str, value: ast::Expression) -> ast::Expression {
+        ast::Expression::VarDeclaration {
+            name: name.to_string(),
+            value: Box::new(value),
+        }
+    }
+
     #[test]
     fn test_parser_addition() {
         assert_eq!(
@@ -703,6 +710,47 @@ mod tests {
                 ),
                 int(123)
             ])
+        );
+    }
+
+    #[test]
+    fn test_parser_var_declaration() {
+        assert_eq!(
+            parse(tokenize("var a = 1").unwrap()).unwrap(),
+            var_decl("a", int(1))
+        );
+        assert_eq!(
+            parse(tokenize("var x = 1 + 2").unwrap()).unwrap(),
+            var_decl("x", add(int(1), int(2)))
+        );
+        assert_eq!(
+            parse(tokenize("var a = 1; var b = 2").unwrap()).unwrap(),
+            block(vec![var_decl("a", int(1)), var_decl("b", int(2))])
+        );
+        assert_eq!(
+            parse(tokenize("{ var a = 1 }").unwrap()).unwrap(),
+            block(vec![var_decl("a", int(1))])
+        );
+        assert_eq!(
+            parse(tokenize("{ var a = { var b = 1; b } }").unwrap()).unwrap(),
+            block(vec![var_decl("a", block(vec![var_decl("b", int(1)), ide("b")]))])
+        );
+
+        // Invalid
+        assert!(
+            parse(tokenize("if true then var a = 1").unwrap())
+                .unwrap_err()
+                .contains("expected")
+        );
+        assert!(
+            parse(tokenize("if true then var a = 1 else 2").unwrap())
+                .unwrap_err()
+                .contains("expected")
+        );
+        assert!(
+            parse(tokenize("f(var a = 1)").unwrap())
+                .unwrap_err()
+                .contains("expected")
         );
     }
 }
