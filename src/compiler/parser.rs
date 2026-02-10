@@ -448,24 +448,54 @@ pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<ast::Expression, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokenizer::tokenize;
+    use crate::compiler::common;
+
+    fn loc() -> common::Location {
+        common::Location { line: 0, column: 0 }
+    }
+
+    fn parse_without_loc(source_code: &str) -> Result<ast::Expression, String> {
+        let mut tokens = tokenizer::tokenize(source_code).unwrap();
+        tokens = tokens
+            .into_iter()
+            .map(|t| tokenizer::Token {
+                kind: t.kind,
+                text: t.text,
+                loc: loc(),
+            })
+            .collect();
+
+        parse(tokens)
+    }
 
     fn int(value: i32) -> ast::Expression {
-        ast::Expression::IntLiteral { value }
+        ast::Expression {
+            loc: loc(),
+            kind: ast::ExpressionKind::IntLiteral { value },
+        }
     }
 
     fn bool(value: bool) -> ast::Expression {
-        ast::Expression::BoolLiteral { value }
+        ast::Expression {
+            loc: loc(),
+            kind: ast::ExpressionKind::BoolLiteral { value },
+        }
     }
 
     fn ide(value: &str) -> ast::Expression {
-        ast::Expression::Identifier {
-            value: value.to_string(),
+        ast::Expression {
+            loc: loc(),
+            kind: ast::ExpressionKind::Identifier {
+                value: value.to_string(),
+            },
         }
     }
 
     fn none() -> ast::Expression {
-        ast::Expression::NoneLiteral
+        ast::Expression {
+            loc: loc(),
+            kind: ast::ExpressionKind::NoneLiteral,
+        }
     }
 
     fn add(left: ast::Expression, right: ast::Expression) -> ast::Expression {
@@ -497,10 +527,13 @@ mod tests {
         right: ast::Expression,
         op: ast::Operation,
     ) -> ast::Expression {
-        ast::Expression::BinaryOp {
-            left: Box::new(left),
-            right: Box::new(right),
-            op,
+        ast::Expression {
+            loc: loc(),
+            kind: ast::ExpressionKind::BinaryOp {
+                left: Box::new(left),
+                right: Box::new(right),
+                op,
+            },
         }
     }
 
@@ -509,24 +542,33 @@ mod tests {
         then_expression: ast::Expression,
         else_expression: Option<ast::Expression>,
     ) -> ast::Expression {
-        ast::Expression::If {
-            condition: Box::new(condition),
-            then_expression: Box::new(then_expression),
-            else_expression: else_expression.map(Box::new),
+        ast::Expression {
+            loc: loc(),
+            kind: ast::ExpressionKind::If {
+                condition: Box::new(condition),
+                then_expression: Box::new(then_expression),
+                else_expression: else_expression.map(Box::new),
+            },
         }
     }
 
     fn function_call(name: &str, arguments: Vec<ast::Expression>) -> ast::Expression {
-        ast::Expression::FunctionCall {
-            name: name.to_string(),
-            arguments,
+        ast::Expression {
+            loc: loc(),
+            kind: ast::ExpressionKind::FunctionCall {
+                name: name.to_string(),
+                arguments,
+            },
         }
     }
 
     fn assignment(left: ast::Expression, right: ast::Expression) -> ast::Expression {
-        ast::Expression::Assignment {
-            left: Box::new(left),
-            right: Box::new(right),
+        ast::Expression {
+            loc: loc(),
+            kind: ast::ExpressionKind::Assignment {
+                left: Box::new(left),
+                right: Box::new(right),
+            },
         }
     }
 
@@ -539,34 +581,46 @@ mod tests {
     }
 
     fn unaryop(operand: ast::Expression, op: ast::UnaryOperation) -> ast::Expression {
-        ast::Expression::UnaryOp {
-            operand: Box::new(operand),
-            op,
+        ast::Expression {
+            loc: loc(),
+            kind: ast::ExpressionKind::UnaryOp {
+                operand: Box::new(operand),
+                op,
+            },
         }
     }
 
     fn block(expressions: Vec<ast::Expression>) -> ast::Expression {
-        ast::Expression::Block { expressions }
+        ast::Expression {
+            loc: loc(),
+            kind: ast::ExpressionKind::Block { expressions },
+        }
     }
 
     fn while_do(condition: ast::Expression, do_expression: ast::Expression) -> ast::Expression {
-        ast::Expression::While {
-            condition: Box::new(condition),
-            do_expression: Box::new(do_expression),
+        ast::Expression {
+            loc: loc(),
+            kind: ast::ExpressionKind::While {
+                condition: Box::new(condition),
+                do_expression: Box::new(do_expression),
+            },
         }
     }
 
     fn var_decl(name: &str, value: ast::Expression) -> ast::Expression {
-        ast::Expression::VarDeclaration {
-            name: name.to_string(),
-            value: Box::new(value),
+        ast::Expression {
+            loc: loc(),
+            kind: ast::ExpressionKind::VarDeclaration {
+                name: name.to_string(),
+                value: Box::new(value),
+            },
         }
     }
 
     #[test]
     fn test_parser_addition() {
         assert_eq!(
-            parse(tokenize("1+1").unwrap()).unwrap(),
+            parse_without_loc("1+1").unwrap(),
             add(int(1), int(1))
         );
     }
@@ -574,7 +628,7 @@ mod tests {
     #[test]
     fn test_parser_substraction() {
         assert_eq!(
-            parse(tokenize("1-1").unwrap()).unwrap(),
+            parse_without_loc("1-1").unwrap(),
             sub(int(1), int(1))
         );
     }
@@ -582,21 +636,21 @@ mod tests {
     #[test]
     fn test_parser_comparison() {
         assert_eq!(
-            parse(tokenize("a<2").unwrap()).unwrap(),
+            parse_without_loc("a<2").unwrap(),
             lt(ide("a"), int(2))
         );
     }
 
     #[test]
     fn test_parser_invalid() {
-        assert_eq!(parse(tokenize("").unwrap()).unwrap(), block(vec![]));
+        assert_eq!(parse_without_loc("").unwrap(), block(vec![]));
         assert!(
-            parse(tokenize("a+b c").unwrap())
+            parse_without_loc("a+b c")
                 .unwrap_err()
                 .contains("expected End got Identifier")
         );
         assert!(
-            parse(tokenize("{ 1 a }").unwrap())
+            parse_without_loc("{ 1 a }")
                 .unwrap_err()
                 .contains("expected Punctuation got Identifier")
         );
@@ -605,7 +659,7 @@ mod tests {
     #[test]
     fn test_parser_associativity() {
         assert_eq!(
-            parse(tokenize("1-2+3").unwrap()).unwrap(),
+            parse_without_loc("1-2+3").unwrap(),
             add(sub(int(1), int(2)), int(3))
         );
     }
@@ -613,11 +667,11 @@ mod tests {
     #[test]
     fn test_parser_paranthesis() {
         assert_eq!(
-            parse(tokenize("1-(2+3)").unwrap()).unwrap(),
+            parse_without_loc("1-(2+3)").unwrap(),
             sub(int(1), add(int(2), int(3)))
         );
         assert_eq!(
-            parse(tokenize("(1-(2+2))+1").unwrap()).unwrap(),
+            parse_without_loc("(1-(2+2))+1").unwrap(),
             add(sub(int(1), add(int(2), int(2))), int(1))
         );
     }
@@ -625,15 +679,15 @@ mod tests {
     #[test]
     fn test_parser_if_statement() {
         assert_eq!(
-            parse(tokenize("if true then 1 else 0").unwrap()).unwrap(),
+            parse_without_loc("if true then 1 else 0").unwrap(),
             if_then_else(bool(true), int(1), Some(int(0)))
         );
         assert_eq!(
-            parse(tokenize("if true then 1").unwrap()).unwrap(),
+            parse_without_loc("if true then 1").unwrap(),
             if_then_else(bool(true), int(1), None)
         );
         assert_eq!(
-            parse(tokenize("if a then b + c else x * y").unwrap()).unwrap(),
+            parse_without_loc("if a then b + c else x * y").unwrap(),
             if_then_else(
                 ide("a"),
                 add(ide("b"), ide("c")),
@@ -641,12 +695,12 @@ mod tests {
             )
         );
         assert_eq!(
-            parse(tokenize("1 + if true then 2 else 3").unwrap()).unwrap(),
+            parse_without_loc("1 + if true then 2 else 3").unwrap(),
             add(int(1), if_then_else(bool(true), int(2), Some(int(3))))
         );
 
         assert_eq!(
-            parse(tokenize("if true and false then a else 3").unwrap()).unwrap(),
+            parse_without_loc("if true and false then a else 3").unwrap(),
             if_then_else(and(bool(true), bool(false)), ide("a"), Some(int(3)))
         );
     }
@@ -654,19 +708,19 @@ mod tests {
     #[test]
     fn test_parser_function_call() {
         assert_eq!(
-            parse(tokenize("parse()").unwrap()).unwrap(),
+            parse_without_loc("parse()").unwrap(),
             function_call("parse", vec![])
         );
         assert_eq!(
-            parse(tokenize("f(a,b)").unwrap()).unwrap(),
+            parse_without_loc("f(a,b)").unwrap(),
             function_call("f", vec![ide("a"), ide("b")])
         );
         assert_eq!(
-            parse(tokenize("hello(1+2)").unwrap()).unwrap(),
+            parse_without_loc("hello(1+2)").unwrap(),
             function_call("hello", vec![add(int(1), int(2))])
         );
         assert_eq!(
-            parse(tokenize("hello(1 + if true then 2 else 3, c)").unwrap()).unwrap(),
+            parse_without_loc("hello(1 + if true then 2 else 3, c)").unwrap(),
             function_call(
                 "hello",
                 vec![
@@ -680,19 +734,19 @@ mod tests {
     #[test]
     fn test_parser_assignment() {
         assert_eq!(
-            parse(tokenize("a = 3").unwrap()).unwrap(),
+            parse_without_loc("a = 3").unwrap(),
             assignment(ide("a"), int(3))
         );
         assert_eq!(
-            parse(tokenize("hello = a+3").unwrap()).unwrap(),
+            parse_without_loc("hello = a+3").unwrap(),
             assignment(ide("hello"), add(ide("a"), int(3)))
         );
         assert_eq!(
-            parse(tokenize("a = b = c").unwrap()).unwrap(),
+            parse_without_loc("a = b = c").unwrap(),
             assignment(ide("a"), assignment(ide("b"), ide("c")))
         );
         assert_eq!(
-            parse(tokenize("f(a+b = b-c)").unwrap()).unwrap(),
+            parse_without_loc("f(a+b = b-c)").unwrap(),
             function_call(
                 "f",
                 vec![assignment(add(ide("a"), ide("b")), sub(ide("b"), ide("c")))]
@@ -703,19 +757,19 @@ mod tests {
     #[test]
     fn test_parser_unary() {
         assert_eq!(
-            parse(tokenize("not true").unwrap()).unwrap(),
+            parse_without_loc("not true").unwrap(),
             not(bool(true))
         );
         assert_eq!(
-            parse(tokenize("not not a").unwrap()).unwrap(),
+            parse_without_loc("not not a").unwrap(),
             not(not(ide("a")))
         );
         assert_eq!(
-            parse(tokenize("-a + b").unwrap()).unwrap(),
+            parse_without_loc("-a + b").unwrap(),
             add(neg(ide("a")), ide("b"))
         );
         assert_eq!(
-            parse(tokenize("(not not a and b and c) or (not b)").unwrap()).unwrap(),
+            parse_without_loc("(not not a and b and c) or (not b)").unwrap(),
             or(
                 and(and(not(not(ide("a"))), ide("b")), ide("c")),
                 not(ide("b"))
@@ -726,23 +780,23 @@ mod tests {
     #[test]
     fn test_parser_block() {
         assert_eq!(
-            parse(tokenize("{ 1 }").unwrap()).unwrap(),
+            parse_without_loc("{ 1 }").unwrap(),
             block(vec![int(1)])
         );
         assert_eq!(
-            parse(tokenize("{ 1; 2 }").unwrap()).unwrap(),
+            parse_without_loc("{ 1; 2 }").unwrap(),
             block(vec![int(1), int(2)])
         );
         assert_eq!(
-            parse(tokenize("{ 1; }").unwrap()).unwrap(),
+            parse_without_loc("{ 1; }").unwrap(),
             block(vec![int(1), none()])
         );
         assert_eq!(
-            parse(tokenize("{ 1; 2; 3 }").unwrap()).unwrap(),
+            parse_without_loc("{ 1; 2; 3 }").unwrap(),
             block(vec![int(1), int(2), int(3)])
         );
         assert_eq!(
-            parse(tokenize("{ a = 1; b = 2; a + b }").unwrap()).unwrap(),
+            parse_without_loc("{ a = 1; b = 2; a + b }").unwrap(),
             block(vec![
                 assignment(ide("a"), int(1)),
                 assignment(ide("b"), int(2)),
@@ -750,23 +804,22 @@ mod tests {
             ])
         );
         assert_eq!(
-            parse(tokenize("{ { 1 } }").unwrap()).unwrap(),
+            parse_without_loc("{ { 1 } }").unwrap(),
             block(vec![block(vec![int(1)])])
         );
         assert_eq!(
-            parse(tokenize("1 + { 2 }").unwrap()).unwrap(),
+            parse_without_loc("1 + { 2 }").unwrap(),
             add(int(1), block(vec![int(2)]))
         );
         assert_eq!(
-            parse(tokenize("x = { f(a); b }").unwrap()).unwrap(),
+            parse_without_loc("x = { f(a); b }").unwrap(),
             assignment(
                 ide("x"),
                 block(vec![function_call("f", vec![ide("a")]), ide("b")])
             )
         );
         assert_eq!(
-            parse(
-                tokenize(
+                parse_without_loc(
                     "{
                         while f() do {
                             x = 10;
@@ -782,8 +835,7 @@ mod tests {
                     }"
                 )
                 .unwrap()
-            )
-            .unwrap(),
+            ,
             block(vec![
                 while_do(
                     function_call("f", vec![]),
@@ -808,23 +860,23 @@ mod tests {
     #[test]
     fn test_parser_var_declaration() {
         assert_eq!(
-            parse(tokenize("var a = 1").unwrap()).unwrap(),
+            parse_without_loc("var a = 1").unwrap(),
             var_decl("a", int(1))
         );
         assert_eq!(
-            parse(tokenize("var x = 1 + 2").unwrap()).unwrap(),
+            parse_without_loc("var x = 1 + 2").unwrap(),
             var_decl("x", add(int(1), int(2)))
         );
         assert_eq!(
-            parse(tokenize("var a = 1; var b = 2").unwrap()).unwrap(),
+            parse_without_loc("var a = 1; var b = 2").unwrap(),
             block(vec![var_decl("a", int(1)), var_decl("b", int(2))])
         );
         assert_eq!(
-            parse(tokenize("{ var a = 1 }").unwrap()).unwrap(),
+            parse_without_loc("{ var a = 1 }").unwrap(),
             block(vec![var_decl("a", int(1))])
         );
         assert_eq!(
-            parse(tokenize("{ var a = { var b = 1; b } }").unwrap()).unwrap(),
+            parse_without_loc("{ var a = { var b = 1; b } }").unwrap(),
             block(vec![var_decl(
                 "a",
                 block(vec![var_decl("b", int(1)), ide("b")])
@@ -833,17 +885,17 @@ mod tests {
 
         // Invalid
         assert!(
-            parse(tokenize("if true then var a = 1").unwrap())
+            parse_without_loc("if true then var a = 1")
                 .unwrap_err()
                 .contains("expected")
         );
         assert!(
-            parse(tokenize("if true then var a = 1 else 2").unwrap())
+            parse_without_loc("if true then var a = 1 else 2")
                 .unwrap_err()
                 .contains("expected")
         );
         assert!(
-            parse(tokenize("f(var a = 1)").unwrap())
+            parse_without_loc("f(var a = 1)")
                 .unwrap_err()
                 .contains("expected")
         );
@@ -852,27 +904,27 @@ mod tests {
     #[test]
     fn test_parser_block_semicolon() {
         assert_eq!(
-            parse(tokenize("{ { a } { b } }").unwrap()).unwrap(),
+            parse_without_loc("{ { a } { b } }").unwrap(),
             block(vec![block(vec![ide("a")]), block(vec![ide("b")])])
         );
-        assert!(parse(tokenize("{ a b }").unwrap()).is_err());
+        assert!(parse_without_loc("{ a b }").is_err());
         assert_eq!(
-            parse(tokenize("{ if true then { a } b }").unwrap()).unwrap(),
+            parse_without_loc("{ if true then { a } b }").unwrap(),
             block(vec![
                 if_then_else(bool(true), block(vec![ide("a")]), None),
                 ide("b")
             ])
         );
         assert_eq!(
-            parse(tokenize("{ if true then { a }; b }").unwrap()).unwrap(),
+            parse_without_loc("{ if true then { a }; b }").unwrap(),
             block(vec![
                 if_then_else(bool(true), block(vec![ide("a")]), None),
                 ide("b")
             ])
         );
-        assert!(parse(tokenize("{ if true then { a } b c }").unwrap()).is_err());
+        assert!(parse_without_loc("{ if true then { a } b c }").is_err());
         assert_eq!(
-            parse(tokenize("{ if true then { a } b; c }").unwrap()).unwrap(),
+            parse_without_loc("{ if true then { a } b; c }").unwrap(),
             block(vec![
                 if_then_else(bool(true), block(vec![ide("a")]), None),
                 ide("b"),
@@ -880,7 +932,7 @@ mod tests {
             ])
         );
         assert_eq!(
-            parse(tokenize("{ if true then { a } else { b } c }").unwrap()).unwrap(),
+            parse_without_loc("{ if true then { a } else { b } c }").unwrap(),
             block(vec![
                 if_then_else(
                     bool(true),
@@ -891,7 +943,7 @@ mod tests {
             ])
         );
         assert_eq!(
-            parse(tokenize("x = { { f(a) } { b } }").unwrap()).unwrap(),
+            parse_without_loc("x = { { f(a) } { b } }").unwrap(),
             assignment(
                 ide("x"),
                 block(vec![
