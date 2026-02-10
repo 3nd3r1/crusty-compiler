@@ -1,3 +1,5 @@
+use crate::compiler::common::Location;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Operation {
     Addition,
@@ -24,7 +26,13 @@ pub enum UnaryOperation {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expression {
+pub struct Expression {
+    pub kind: ExpressionKind,
+    pub loc: Location,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExpressionKind {
     IntLiteral {
         value: i32,
     },
