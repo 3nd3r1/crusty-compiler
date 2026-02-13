@@ -33,11 +33,25 @@ pub fn interpret(node: &ast::Expression, symtab: &mut SymTab) -> Result<Value, S
         ast::ExpressionKind::IntLiteral { value } => Ok(Value::Int(*value)),
         ast::ExpressionKind::BoolLiteral { value } => Ok(Value::Bool(*value)),
         ast::ExpressionKind::BinaryOp { left, right, op } => {
-            let a = interpret(&*left, symtab)?;
-            let b = interpret(&*right, symtab)?;
-            match (a, b, op) {
-                (Value::Int(a), Value::Int(b), ast::Operation::Addition) => Ok(Value::Int(a + b)),
-                (_, _, op) => Err(format!("unexpected operation {:?}", op)),
+            let left = interpret(&*left, symtab)?;
+            let right = interpret(&*right, symtab)?;
+
+            let key = op.to_string();
+
+            if let Some(Value::BuiltInFunction(func)) = symtab.locals.get(&key) {
+                func(vec![left, right])
+            } else {
+                Err(format!("unexpected operator {:?}", op))
+            }
+        }
+        ast::ExpressionKind::UnaryOp { operand, op } => {
+            let operand = interpret(&*operand, symtab)?;
+            let key = format!("unary_{}", op);
+
+            if let Some(Value::BuiltInFunction(func)) = symtab.locals.get(&key) {
+                func(vec![operand])
+            } else {
+                Err(format!("unexpected operator {:?}", op))
             }
         }
         ast::ExpressionKind::If {
