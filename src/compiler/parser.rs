@@ -448,41 +448,23 @@ pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<ast::Expression, String> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::compiler::common;
+    use crate::compiler::tokenizer::tests::*;
 
-    fn loc() -> common::Location {
-        common::Location { line: 0, column: 0 }
-    }
-
-    fn parse_without_loc(source_code: &str) -> Result<ast::Expression, String> {
-        let mut tokens = tokenizer::tokenize(source_code).unwrap();
-        tokens = tokens
-            .into_iter()
-            .map(|t| tokenizer::Token {
-                kind: t.kind,
-                text: t.text,
-                loc: loc(),
-            })
-            .collect();
-
-        parse(tokens)
-    }
-
-    pub fn int(value: i32) -> ast::Expression {
+    pub fn eint(value: i32) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::IntLiteral { value },
         }
     }
 
-    pub fn bool(value: bool) -> ast::Expression {
+    pub fn ebool(value: bool) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::BoolLiteral { value },
         }
     }
 
-    pub fn ide(value: &str) -> ast::Expression {
+    pub fn eide(value: &str) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::Identifier {
@@ -491,38 +473,38 @@ pub mod tests {
         }
     }
 
-    pub fn none() -> ast::Expression {
+    pub fn enone() -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::NoneLiteral,
         }
     }
 
-    pub fn add(left: ast::Expression, right: ast::Expression) -> ast::Expression {
-        binaryop(left, right, ast::Operation::Addition)
+    pub fn eadd(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+        ebinaryop(left, right, ast::Operation::Addition)
     }
 
-    pub fn sub(left: ast::Expression, right: ast::Expression) -> ast::Expression {
-        binaryop(left, right, ast::Operation::Substraction)
+    pub fn esub(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+        ebinaryop(left, right, ast::Operation::Substraction)
     }
 
-    pub fn mul(left: ast::Expression, right: ast::Expression) -> ast::Expression {
-        binaryop(left, right, ast::Operation::Multiplication)
+    pub fn emul(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+        ebinaryop(left, right, ast::Operation::Multiplication)
     }
 
-    pub fn lt(left: ast::Expression, right: ast::Expression) -> ast::Expression {
-        binaryop(left, right, ast::Operation::LessThan)
+    pub fn elt(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+        ebinaryop(left, right, ast::Operation::LessThan)
     }
 
-    pub fn and(left: ast::Expression, right: ast::Expression) -> ast::Expression {
-        binaryop(left, right, ast::Operation::And)
+    pub fn eand(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+        ebinaryop(left, right, ast::Operation::And)
     }
 
-    pub fn or(left: ast::Expression, right: ast::Expression) -> ast::Expression {
-        binaryop(left, right, ast::Operation::Or)
+    pub fn eor(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+        ebinaryop(left, right, ast::Operation::Or)
     }
 
-    pub fn binaryop(
+    pub fn ebinaryop(
         left: ast::Expression,
         right: ast::Expression,
         op: ast::Operation,
@@ -537,7 +519,7 @@ pub mod tests {
         }
     }
 
-    pub fn if_then_else(
+    pub fn eif(
         condition: ast::Expression,
         then_expression: ast::Expression,
         else_expression: Option<ast::Expression>,
@@ -552,7 +534,7 @@ pub mod tests {
         }
     }
 
-    pub fn function_call(name: &str, arguments: Vec<ast::Expression>) -> ast::Expression {
+    pub fn ecall(name: &str, arguments: Vec<ast::Expression>) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::FunctionCall {
@@ -562,7 +544,7 @@ pub mod tests {
         }
     }
 
-    pub fn assignment(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+    pub fn eassign(left: ast::Expression, right: ast::Expression) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::Assignment {
@@ -572,15 +554,15 @@ pub mod tests {
         }
     }
 
-    pub fn neg(operand: ast::Expression) -> ast::Expression {
-        unaryop(operand, ast::UnaryOperation::Neg)
+    pub fn eneg(operand: ast::Expression) -> ast::Expression {
+        eunaryop(operand, ast::UnaryOperation::Neg)
     }
 
-    pub fn not(operand: ast::Expression) -> ast::Expression {
-        unaryop(operand, ast::UnaryOperation::Not)
+    pub fn enot(operand: ast::Expression) -> ast::Expression {
+        eunaryop(operand, ast::UnaryOperation::Not)
     }
 
-    pub fn unaryop(operand: ast::Expression, op: ast::UnaryOperation) -> ast::Expression {
+    pub fn eunaryop(operand: ast::Expression, op: ast::UnaryOperation) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::UnaryOp {
@@ -590,14 +572,14 @@ pub mod tests {
         }
     }
 
-    pub fn block(expressions: Vec<ast::Expression>) -> ast::Expression {
+    pub fn eblock(expressions: Vec<ast::Expression>) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::Block { expressions },
         }
     }
 
-    pub fn while_do(condition: ast::Expression, do_expression: ast::Expression) -> ast::Expression {
+    pub fn ewhile(condition: ast::Expression, do_expression: ast::Expression) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::While {
@@ -607,7 +589,7 @@ pub mod tests {
         }
     }
 
-    pub fn var_decl(name: &str, value: ast::Expression) -> ast::Expression {
+    pub fn evar(name: &str, value: ast::Expression) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::VarDeclaration {
@@ -620,37 +602,37 @@ pub mod tests {
     #[test]
     fn test_parser_addition() {
         assert_eq!(
-            parse_without_loc("1+1").unwrap(),
-            add(int(1), int(1))
+            parse(vec![tint("1"), tope("+"), tint("1"), tend()]).unwrap(),
+            eadd(eint(1), eint(1))
         );
     }
 
     #[test]
     fn test_parser_substraction() {
         assert_eq!(
-            parse_without_loc("1-1").unwrap(),
-            sub(int(1), int(1))
+            parse(vec![tint("1"), tope("-"), tint("1"), tend()]).unwrap(),
+            esub(eint(1), eint(1))
         );
     }
 
     #[test]
     fn test_parser_comparison() {
         assert_eq!(
-            parse_without_loc("a<2").unwrap(),
-            lt(ide("a"), int(2))
+            parse(vec![tide("a"), tope("<"), tint("2"), tend()]).unwrap(),
+            elt(eide("a"), eint(2))
         );
     }
 
     #[test]
     fn test_parser_invalid() {
-        assert_eq!(parse_without_loc("").unwrap(), block(vec![]));
+        assert_eq!(parse(vec![tend()]).unwrap(), eblock(vec![]));
         assert!(
-            parse_without_loc("a+b c")
+            parse(vec![tide("a"), tope("+"), tide("b"), tide("c"), tend()])
                 .unwrap_err()
                 .contains("expected End got Identifier")
         );
         assert!(
-            parse_without_loc("{ 1 a }")
+            parse(vec![tpunc("{"), tint("1"), tide("a"), tpunc("}"), tend()])
                 .unwrap_err()
                 .contains("expected Punctuation got Identifier")
         );
@@ -659,73 +641,189 @@ pub mod tests {
     #[test]
     fn test_parser_associativity() {
         assert_eq!(
-            parse_without_loc("1-2+3").unwrap(),
-            add(sub(int(1), int(2)), int(3))
+            parse(vec![
+                tint("1"),
+                tope("-"),
+                tint("2"),
+                tope("+"),
+                tint("3"),
+                tend()
+            ])
+            .unwrap(),
+            eadd(esub(eint(1), eint(2)), eint(3))
         );
     }
 
     #[test]
     fn test_parser_paranthesis() {
         assert_eq!(
-            parse_without_loc("1-(2+3)").unwrap(),
-            sub(int(1), add(int(2), int(3)))
+            parse(vec![
+                tint("1"),
+                tope("-"),
+                tpunc("("),
+                tint("2"),
+                tope("+"),
+                tint("3"),
+                tpunc(")"),
+                tend()
+            ])
+            .unwrap(),
+            esub(eint(1), eadd(eint(2), eint(3)))
         );
         assert_eq!(
-            parse_without_loc("(1-(2+2))+1").unwrap(),
-            add(sub(int(1), add(int(2), int(2))), int(1))
+            parse(vec![
+                tpunc("("),
+                tint("1"),
+                tope("-"),
+                tpunc("("),
+                tint("2"),
+                tope("+"),
+                tint("2"),
+                tpunc(")"),
+                tpunc(")"),
+                tope("+"),
+                tint("1"),
+                tend()
+            ])
+            .unwrap(),
+            eadd(esub(eint(1), eadd(eint(2), eint(2))), eint(1))
         );
     }
 
     #[test]
     fn test_parser_if_statement() {
         assert_eq!(
-            parse_without_loc("if true then 1 else 0").unwrap(),
-            if_then_else(bool(true), int(1), Some(int(0)))
+            parse(vec![
+                tkeyw("if"),
+                tbool("true"),
+                tkeyw("then"),
+                tint("1"),
+                tkeyw("else"),
+                tint("0"),
+                tend()
+            ])
+            .unwrap(),
+            eif(ebool(true), eint(1), Some(eint(0)))
         );
         assert_eq!(
-            parse_without_loc("if true then 1").unwrap(),
-            if_then_else(bool(true), int(1), None)
+            parse(vec![
+                tkeyw("if"),
+                tbool("true"),
+                tkeyw("then"),
+                tint("1"),
+                tend()
+            ])
+            .unwrap(),
+            eif(ebool(true), eint(1), None)
         );
         assert_eq!(
-            parse_without_loc("if a then b + c else x * y").unwrap(),
-            if_then_else(
-                ide("a"),
-                add(ide("b"), ide("c")),
-                Some(mul(ide("x"), ide("y")))
+            parse(vec![
+                tkeyw("if"),
+                tide("a"),
+                tkeyw("then"),
+                tide("b"),
+                tope("+"),
+                tide("c"),
+                tkeyw("else"),
+                tide("x"),
+                tope("*"),
+                tide("y"),
+                tend()
+            ])
+            .unwrap(),
+            eif(
+                eide("a"),
+                eadd(eide("b"), eide("c")),
+                Some(emul(eide("x"), eide("y")))
             )
         );
         assert_eq!(
-            parse_without_loc("1 + if true then 2 else 3").unwrap(),
-            add(int(1), if_then_else(bool(true), int(2), Some(int(3))))
+            parse(vec![
+                tint("1"),
+                tope("+"),
+                tkeyw("if"),
+                tbool("true"),
+                tkeyw("then"),
+                tint("2"),
+                tkeyw("else"),
+                tint("3"),
+                tend()
+            ])
+            .unwrap(),
+            eadd(eint(1), eif(ebool(true), eint(2), Some(eint(3))))
         );
-
         assert_eq!(
-            parse_without_loc("if true and false then a else 3").unwrap(),
-            if_then_else(and(bool(true), bool(false)), ide("a"), Some(int(3)))
+            parse(vec![
+                tkeyw("if"),
+                tbool("true"),
+                tope("and"),
+                tbool("false"),
+                tkeyw("then"),
+                tide("a"),
+                tkeyw("else"),
+                tint("3"),
+                tend()
+            ])
+            .unwrap(),
+            eif(eand(ebool(true), ebool(false)), eide("a"), Some(eint(3)))
         );
     }
 
     #[test]
     fn test_parser_function_call() {
         assert_eq!(
-            parse_without_loc("parse()").unwrap(),
-            function_call("parse", vec![])
+            parse(vec![tide("parse"), tpunc("("), tpunc(")"), tend()]).unwrap(),
+            ecall("parse", vec![])
         );
         assert_eq!(
-            parse_without_loc("f(a,b)").unwrap(),
-            function_call("f", vec![ide("a"), ide("b")])
+            parse(vec![
+                tide("f"),
+                tpunc("("),
+                tide("a"),
+                tpunc(","),
+                tide("b"),
+                tpunc(")"),
+                tend()
+            ])
+            .unwrap(),
+            ecall("f", vec![eide("a"), eide("b")])
         );
         assert_eq!(
-            parse_without_loc("hello(1+2)").unwrap(),
-            function_call("hello", vec![add(int(1), int(2))])
+            parse(vec![
+                tide("hello"),
+                tpunc("("),
+                tint("1"),
+                tope("+"),
+                tint("2"),
+                tpunc(")"),
+                tend()
+            ])
+            .unwrap(),
+            ecall("hello", vec![eadd(eint(1), eint(2))])
         );
         assert_eq!(
-            parse_without_loc("hello(1 + if true then 2 else 3, c)").unwrap(),
-            function_call(
+            parse(vec![
+                tide("hello"),
+                tpunc("("),
+                tint("1"),
+                tope("+"),
+                tkeyw("if"),
+                tbool("true"),
+                tkeyw("then"),
+                tint("2"),
+                tkeyw("else"),
+                tint("3"),
+                tpunc(","),
+                tide("c"),
+                tpunc(")"),
+                tend()
+            ])
+            .unwrap(),
+            ecall(
                 "hello",
                 vec![
-                    add(int(1), if_then_else(bool(true), int(2), Some(int(3)))),
-                    ide("c")
+                    eadd(eint(1), eif(ebool(true), eint(2), Some(eint(3)))),
+                    eide("c")
                 ]
             )
         );
@@ -734,22 +832,54 @@ pub mod tests {
     #[test]
     fn test_parser_assignment() {
         assert_eq!(
-            parse_without_loc("a = 3").unwrap(),
-            assignment(ide("a"), int(3))
+            parse(vec![tide("a"), tope("="), tint("3"), tend()]).unwrap(),
+            eassign(eide("a"), eint(3))
         );
         assert_eq!(
-            parse_without_loc("hello = a+3").unwrap(),
-            assignment(ide("hello"), add(ide("a"), int(3)))
+            parse(vec![
+                tide("hello"),
+                tope("="),
+                tide("a"),
+                tope("+"),
+                tint("3"),
+                tend()
+            ])
+            .unwrap(),
+            eassign(eide("hello"), eadd(eide("a"), eint(3)))
         );
         assert_eq!(
-            parse_without_loc("a = b = c").unwrap(),
-            assignment(ide("a"), assignment(ide("b"), ide("c")))
+            parse(vec![
+                tide("a"),
+                tope("="),
+                tide("b"),
+                tope("="),
+                tide("c"),
+                tend()
+            ])
+            .unwrap(),
+            eassign(eide("a"), eassign(eide("b"), eide("c")))
         );
         assert_eq!(
-            parse_without_loc("f(a+b = b-c)").unwrap(),
-            function_call(
+            parse(vec![
+                tide("f"),
+                tpunc("("),
+                tide("a"),
+                tope("+"),
+                tide("b"),
+                tope("="),
+                tide("b"),
+                tope("-"),
+                tide("c"),
+                tpunc(")"),
+                tend()
+            ])
+            .unwrap(),
+            ecall(
                 "f",
-                vec![assignment(add(ide("a"), ide("b")), sub(ide("b"), ide("c")))]
+                vec![eassign(
+                    eadd(eide("a"), eide("b")),
+                    esub(eide("b"), eide("c"))
+                )]
             )
         );
     }
@@ -757,22 +887,39 @@ pub mod tests {
     #[test]
     fn test_parser_unary() {
         assert_eq!(
-            parse_without_loc("not true").unwrap(),
-            not(bool(true))
+            parse(vec![tkeyw("not"), tbool("true"), tend()]).unwrap(),
+            enot(ebool(true))
         );
         assert_eq!(
-            parse_without_loc("not not a").unwrap(),
-            not(not(ide("a")))
+            parse(vec![tkeyw("not"), tkeyw("not"), tide("a"), tend()]).unwrap(),
+            enot(enot(eide("a")))
         );
         assert_eq!(
-            parse_without_loc("-a + b").unwrap(),
-            add(neg(ide("a")), ide("b"))
+            parse(vec![tope("-"), tide("a"), tope("+"), tide("b"), tend()]).unwrap(),
+            eadd(eneg(eide("a")), eide("b"))
         );
         assert_eq!(
-            parse_without_loc("(not not a and b and c) or (not b)").unwrap(),
-            or(
-                and(and(not(not(ide("a"))), ide("b")), ide("c")),
-                not(ide("b"))
+            parse(vec![
+                tpunc("("),
+                tkeyw("not"),
+                tkeyw("not"),
+                tide("a"),
+                tope("and"),
+                tide("b"),
+                tope("and"),
+                tide("c"),
+                tpunc(")"),
+                tope("or"),
+                tpunc("("),
+                tkeyw("not"),
+                tide("b"),
+                tpunc(")"),
+                tend()
+            ])
+            .unwrap(),
+            eor(
+                eand(eand(enot(enot(eide("a"))), eide("b")), eide("c")),
+                enot(eide("b"))
             )
         );
     }
@@ -780,175 +927,394 @@ pub mod tests {
     #[test]
     fn test_parser_block() {
         assert_eq!(
-            parse_without_loc("{ 1 }").unwrap(),
-            block(vec![int(1)])
+            parse(vec![tpunc("{"), tint("1"), tpunc("}"), tend()]).unwrap(),
+            eblock(vec![eint(1)])
         );
         assert_eq!(
-            parse_without_loc("{ 1; 2 }").unwrap(),
-            block(vec![int(1), int(2)])
+            parse(vec![
+                tpunc("{"),
+                tint("1"),
+                tpunc(";"),
+                tint("2"),
+                tpunc("}"),
+                tend()
+            ])
+            .unwrap(),
+            eblock(vec![eint(1), eint(2)])
         );
         assert_eq!(
-            parse_without_loc("{ 1; }").unwrap(),
-            block(vec![int(1), none()])
+            parse(vec![tpunc("{"), tint("1"), tpunc(";"), tpunc("}"), tend()]).unwrap(),
+            eblock(vec![eint(1), enone()])
         );
         assert_eq!(
-            parse_without_loc("{ 1; 2; 3 }").unwrap(),
-            block(vec![int(1), int(2), int(3)])
+            parse(vec![
+                tpunc("{"),
+                tint("1"),
+                tpunc(";"),
+                tint("2"),
+                tpunc(";"),
+                tint("3"),
+                tpunc("}"),
+                tend()
+            ])
+            .unwrap(),
+            eblock(vec![eint(1), eint(2), eint(3)])
         );
         assert_eq!(
-            parse_without_loc("{ a = 1; b = 2; a + b }").unwrap(),
-            block(vec![
-                assignment(ide("a"), int(1)),
-                assignment(ide("b"), int(2)),
-                add(ide("a"), ide("b"))
+            parse(vec![
+                tpunc("{"),
+                tide("a"),
+                tope("="),
+                tint("1"),
+                tpunc(";"),
+                tide("b"),
+                tope("="),
+                tint("2"),
+                tpunc(";"),
+                tide("a"),
+                tope("+"),
+                tide("b"),
+                tpunc("}"),
+                tend()
+            ])
+            .unwrap(),
+            eblock(vec![
+                eassign(eide("a"), eint(1)),
+                eassign(eide("b"), eint(2)),
+                eadd(eide("a"), eide("b"))
             ])
         );
         assert_eq!(
-            parse_without_loc("{ { 1 } }").unwrap(),
-            block(vec![block(vec![int(1)])])
+            parse(vec![
+                tpunc("{"),
+                tpunc("{"),
+                tint("1"),
+                tpunc("}"),
+                tpunc("}"),
+                tend()
+            ])
+            .unwrap(),
+            eblock(vec![eblock(vec![eint(1)])])
         );
         assert_eq!(
-            parse_without_loc("1 + { 2 }").unwrap(),
-            add(int(1), block(vec![int(2)]))
+            parse(vec![
+                tint("1"),
+                tope("+"),
+                tpunc("{"),
+                tint("2"),
+                tpunc("}"),
+                tend()
+            ])
+            .unwrap(),
+            eadd(eint(1), eblock(vec![eint(2)]))
         );
         assert_eq!(
-            parse_without_loc("x = { f(a); b }").unwrap(),
-            assignment(
-                ide("x"),
-                block(vec![function_call("f", vec![ide("a")]), ide("b")])
+            parse(vec![
+                tide("x"),
+                tope("="),
+                tpunc("{"),
+                tide("f"),
+                tpunc("("),
+                tide("a"),
+                tpunc(")"),
+                tpunc(";"),
+                tide("b"),
+                tpunc("}"),
+                tend()
+            ])
+            .unwrap(),
+            eassign(
+                eide("x"),
+                eblock(vec![ecall("f", vec![eide("a")]), eide("b")])
             )
         );
+    }
+
+    #[test]
+    fn test_parser_while() {
         assert_eq!(
-                parse_without_loc(
-                    "{
-                        while f() do {
-                            x = 10;
-                            y = if g(x) then {
-                                x = x + 1;
-                                x
-                            } else {
-                                g(x)
-                            };
-                            g(y)
-                        };
-                        123
-                    }"
-                )
-                .unwrap()
-            ,
-            block(vec![
-                while_do(
-                    function_call("f", vec![]),
-                    block(vec![
-                        assignment(ide("x"), int(10)),
-                        assignment(
-                            ide("y"),
-                            if_then_else(
-                                function_call("g", vec![ide("x")]),
-                                block(vec![assignment(ide("x"), add(ide("x"), int(1))), ide("x")]),
-                                Some(block(vec![function_call("g", vec![ide("x")])]))
-                            )
-                        ),
-                        function_call("g", vec![ide("y")])
-                    ])
-                ),
-                int(123)
+            parse(vec![
+                tkeyw("while"),
+                tide("f"),
+                tpunc("("),
+                tpunc(")"),
+                tkeyw("do"),
+                tpunc("{"),
+                tide("x"),
+                tope("="),
+                tint("10"),
+                tpunc("}"),
+                tend()
             ])
+            .unwrap(),
+            ewhile(
+                ecall("f", vec![]),
+                eblock(vec![eassign(eide("x"), eint(10))])
+            )
         );
     }
 
     #[test]
     fn test_parser_var_declaration() {
         assert_eq!(
-            parse_without_loc("var a = 1").unwrap(),
-            var_decl("a", int(1))
+            parse(vec![tkeyw("var"), tide("a"), tope("="), tint("1"), tend()]).unwrap(),
+            evar("a", eint(1))
         );
         assert_eq!(
-            parse_without_loc("var x = 1 + 2").unwrap(),
-            var_decl("x", add(int(1), int(2)))
+            parse(vec![
+                tkeyw("var"),
+                tide("x"),
+                tope("="),
+                tint("1"),
+                tope("+"),
+                tint("2"),
+                tend()
+            ])
+            .unwrap(),
+            evar("x", eadd(eint(1), eint(2)))
         );
         assert_eq!(
-            parse_without_loc("var a = 1; var b = 2").unwrap(),
-            block(vec![var_decl("a", int(1)), var_decl("b", int(2))])
+            parse(vec![
+                tkeyw("var"),
+                tide("a"),
+                tope("="),
+                tint("1"),
+                tpunc(";"),
+                tkeyw("var"),
+                tide("b"),
+                tope("="),
+                tint("2"),
+                tend()
+            ])
+            .unwrap(),
+            eblock(vec![evar("a", eint(1)), evar("b", eint(2))])
         );
         assert_eq!(
-            parse_without_loc("{ var a = 1 }").unwrap(),
-            block(vec![var_decl("a", int(1))])
+            parse(vec![
+                tpunc("{"),
+                tkeyw("var"),
+                tide("a"),
+                tope("="),
+                tint("1"),
+                tpunc("}"),
+                tend()
+            ])
+            .unwrap(),
+            eblock(vec![evar("a", eint(1))])
         );
         assert_eq!(
-            parse_without_loc("{ var a = { var b = 1; b } }").unwrap(),
-            block(vec![var_decl(
-                "a",
-                block(vec![var_decl("b", int(1)), ide("b")])
-            )])
+            parse(vec![
+                tpunc("{"),
+                tkeyw("var"),
+                tide("a"),
+                tope("="),
+                tpunc("{"),
+                tkeyw("var"),
+                tide("b"),
+                tope("="),
+                tint("1"),
+                tpunc(";"),
+                tide("b"),
+                tpunc("}"),
+                tpunc("}"),
+                tend()
+            ])
+            .unwrap(),
+            eblock(vec![evar("a", eblock(vec![evar("b", eint(1)), eide("b")]))])
         );
 
         // Invalid
         assert!(
-            parse_without_loc("if true then var a = 1")
-                .unwrap_err()
-                .contains("expected")
+            parse(vec![
+                tkeyw("if"),
+                tbool("true"),
+                tkeyw("then"),
+                tkeyw("var"),
+                tide("a"),
+                tope("="),
+                tint("1"),
+                tend()
+            ])
+            .unwrap_err()
+            .contains("expected")
         );
         assert!(
-            parse_without_loc("if true then var a = 1 else 2")
-                .unwrap_err()
-                .contains("expected")
+            parse(vec![
+                tkeyw("if"),
+                tbool("true"),
+                tkeyw("then"),
+                tkeyw("var"),
+                tide("a"),
+                tope("="),
+                tint("1"),
+                tkeyw("else"),
+                tint("2"),
+                tend()
+            ])
+            .unwrap_err()
+            .contains("expected")
         );
         assert!(
-            parse_without_loc("f(var a = 1)")
-                .unwrap_err()
-                .contains("expected")
+            parse(vec![
+                tide("f"),
+                tpunc("("),
+                tkeyw("var"),
+                tide("a"),
+                tope("="),
+                tint("1"),
+                tpunc(")"),
+                tend()
+            ])
+            .unwrap_err()
+            .contains("expected")
         );
     }
 
     #[test]
     fn test_parser_block_semicolon() {
         assert_eq!(
-            parse_without_loc("{ { a } { b } }").unwrap(),
-            block(vec![block(vec![ide("a")]), block(vec![ide("b")])])
+            parse(vec![
+                tpunc("{"),
+                tpunc("{"),
+                tide("a"),
+                tpunc("}"),
+                tpunc("{"),
+                tide("b"),
+                tpunc("}"),
+                tpunc("}"),
+                tend()
+            ])
+            .unwrap(),
+            eblock(vec![eblock(vec![eide("a")]), eblock(vec![eide("b")])])
         );
-        assert!(parse_without_loc("{ a b }").is_err());
+        assert!(parse(vec![tpunc("{"), tide("a"), tide("b"), tpunc("}")]).is_err());
         assert_eq!(
-            parse_without_loc("{ if true then { a } b }").unwrap(),
-            block(vec![
-                if_then_else(bool(true), block(vec![ide("a")]), None),
-                ide("b")
+            parse(vec![
+                tpunc("{"),
+                tkeyw("if"),
+                tbool("true"),
+                tkeyw("then"),
+                tpunc("{"),
+                tide("a"),
+                tpunc("}"),
+                tide("b"),
+                tpunc("}"),
+                tend()
+            ])
+            .unwrap(),
+            eblock(vec![
+                eif(ebool(true), eblock(vec![eide("a")]), None),
+                eide("b")
             ])
         );
         assert_eq!(
-            parse_without_loc("{ if true then { a }; b }").unwrap(),
-            block(vec![
-                if_then_else(bool(true), block(vec![ide("a")]), None),
-                ide("b")
+            parse(vec![
+                tpunc("{"),
+                tkeyw("if"),
+                tbool("true"),
+                tkeyw("then"),
+                tpunc("{"),
+                tide("a"),
+                tpunc("}"),
+                tpunc(";"),
+                tide("b"),
+                tpunc("}"),
+                tend()
+            ])
+            .unwrap(),
+            eblock(vec![
+                eif(ebool(true), eblock(vec![eide("a")]), None),
+                eide("b")
             ])
         );
-        assert!(parse_without_loc("{ if true then { a } b c }").is_err());
+        assert!(
+            parse(vec![
+                tpunc("{"),
+                tkeyw("if"),
+                tbool("true"),
+                tkeyw("then"),
+                tpunc("{"),
+                tide("a"),
+                tpunc("}"),
+                tide("b"),
+                tide("c"),
+                tpunc("}"),
+                tend()
+            ])
+            .is_err()
+        );
         assert_eq!(
-            parse_without_loc("{ if true then { a } b; c }").unwrap(),
-            block(vec![
-                if_then_else(bool(true), block(vec![ide("a")]), None),
-                ide("b"),
-                ide("c")
+            parse(vec![
+                tpunc("{"),
+                tkeyw("if"),
+                tbool("true"),
+                tkeyw("then"),
+                tpunc("{"),
+                tide("a"),
+                tpunc("}"),
+                tide("b"),
+                tpunc(";"),
+                tide("c"),
+                tpunc("}"),
+                tend()
+            ])
+            .unwrap(),
+            eblock(vec![
+                eif(ebool(true), eblock(vec![eide("a")]), None),
+                eide("b"),
+                eide("c")
             ])
         );
         assert_eq!(
-            parse_without_loc("{ if true then { a } else { b } c }").unwrap(),
-            block(vec![
-                if_then_else(
-                    bool(true),
-                    block(vec![ide("a")]),
-                    Some(block(vec![ide("b")]))
+            parse(vec![
+                tpunc("{"),
+                tkeyw("if"),
+                tbool("true"),
+                tkeyw("then"),
+                tpunc("{"),
+                tide("a"),
+                tpunc("}"),
+                tkeyw("else"),
+                tpunc("{"),
+                tide("b"),
+                tpunc("}"),
+                tide("c"),
+                tpunc("}"),
+                tend()
+            ])
+            .unwrap(),
+            eblock(vec![
+                eif(
+                    ebool(true),
+                    eblock(vec![eide("a")]),
+                    Some(eblock(vec![eide("b")]))
                 ),
-                ide("c")
+                eide("c")
             ])
         );
         assert_eq!(
-            parse_without_loc("x = { { f(a) } { b } }").unwrap(),
-            assignment(
-                ide("x"),
-                block(vec![
-                    block(vec![function_call("f", vec![ide("a")])]),
-                    block(vec![ide("b")])
+            parse(vec![
+                tide("x"),
+                tope("="),
+                tpunc("{"),
+                tpunc("{"),
+                tide("f"),
+                tpunc("("),
+                tide("a"),
+                tpunc(")"),
+                tpunc("}"),
+                tpunc("{"),
+                tide("b"),
+                tpunc("}"),
+                tpunc("}"),
+                tend()
+            ])
+            .unwrap(),
+            eassign(
+                eide("x"),
+                eblock(vec![
+                    eblock(vec![ecall("f", vec![eide("a")])]),
+                    eblock(vec![eide("b")])
                 ])
             )
         );
