@@ -1034,6 +1034,7 @@ pub mod tests {
     fn test_parser_while() {
         assert_eq!(
             parse(vec![
+                tpunc("{"),
                 tkeyw("while"),
                 tide("f"),
                 tpunc("("),
@@ -1043,14 +1044,64 @@ pub mod tests {
                 tide("x"),
                 tope("="),
                 tint("10"),
+                tpunc(";"),
+                tide("y"),
+                tope("="),
+                tkeyw("if"),
+                tide("g"),
+                tpunc("("),
+                tide("x"),
+                tpunc(")"),
+                tkeyw("then"),
+                tpunc("{"),
+                tide("x"),
+                tope("="),
+                tide("x"),
+                tope("+"),
+                tint("1"),
+                tpunc(";"),
+                tide("x"),
+                tpunc("}"),
+                tkeyw("else"),
+                tpunc("{"),
+                tide("g"),
+                tpunc("("),
+                tide("x"),
+                tpunc(")"),
+                tpunc("}"),
+                tpunc(";"),
+                tide("g"),
+                tpunc("("),
+                tide("y"),
+                tpunc(")"),
+                tpunc("}"),
+                tpunc(";"),
+                tint("123"),
                 tpunc("}"),
                 tend()
             ])
             .unwrap(),
-            ewhile(
-                ecall("f", vec![]),
-                eblock(vec![eassign(eide("x"), eint(10))])
-            )
+            eblock(vec![
+                ewhile(
+                    ecall("f", vec![]),
+                    eblock(vec![
+                        eassign(eide("x"), eint(10)),
+                        eassign(
+                            eide("y"),
+                            eif(
+                                ecall("g", vec![eide("x")]),
+                                eblock(vec![
+                                    eassign(eide("x"), eadd(eide("x"), eint(1))),
+                                    eide("x")
+                                ]),
+                                Some(eblock(vec![ecall("g", vec![eide("x")])]))
+                            )
+                        ),
+                        ecall("g", vec![eide("y")])
+                    ])
+                ),
+                eint(123)
+            ])
         );
     }
 
