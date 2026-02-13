@@ -446,7 +446,7 @@ pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<ast::Expression, String> {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::compiler::common;
 
@@ -468,21 +468,21 @@ mod tests {
         parse(tokens)
     }
 
-    fn int(value: i32) -> ast::Expression {
+    pub fn int(value: i32) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::IntLiteral { value },
         }
     }
 
-    fn bool(value: bool) -> ast::Expression {
+    pub fn bool(value: bool) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::BoolLiteral { value },
         }
     }
 
-    fn ide(value: &str) -> ast::Expression {
+    pub fn ide(value: &str) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::Identifier {
@@ -491,38 +491,38 @@ mod tests {
         }
     }
 
-    fn none() -> ast::Expression {
+    pub fn none() -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::NoneLiteral,
         }
     }
 
-    fn add(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+    pub fn add(left: ast::Expression, right: ast::Expression) -> ast::Expression {
         binaryop(left, right, ast::Operation::Addition)
     }
 
-    fn sub(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+    pub fn sub(left: ast::Expression, right: ast::Expression) -> ast::Expression {
         binaryop(left, right, ast::Operation::Substraction)
     }
 
-    fn mul(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+    pub fn mul(left: ast::Expression, right: ast::Expression) -> ast::Expression {
         binaryop(left, right, ast::Operation::Multiplication)
     }
 
-    fn lt(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+    pub fn lt(left: ast::Expression, right: ast::Expression) -> ast::Expression {
         binaryop(left, right, ast::Operation::LessThan)
     }
 
-    fn and(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+    pub fn and(left: ast::Expression, right: ast::Expression) -> ast::Expression {
         binaryop(left, right, ast::Operation::And)
     }
 
-    fn or(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+    pub fn or(left: ast::Expression, right: ast::Expression) -> ast::Expression {
         binaryop(left, right, ast::Operation::Or)
     }
 
-    fn binaryop(
+    pub fn binaryop(
         left: ast::Expression,
         right: ast::Expression,
         op: ast::Operation,
@@ -537,7 +537,7 @@ mod tests {
         }
     }
 
-    fn if_then_else(
+    pub fn if_then_else(
         condition: ast::Expression,
         then_expression: ast::Expression,
         else_expression: Option<ast::Expression>,
@@ -552,7 +552,7 @@ mod tests {
         }
     }
 
-    fn function_call(name: &str, arguments: Vec<ast::Expression>) -> ast::Expression {
+    pub fn function_call(name: &str, arguments: Vec<ast::Expression>) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::FunctionCall {
@@ -562,7 +562,7 @@ mod tests {
         }
     }
 
-    fn assignment(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+    pub fn assignment(left: ast::Expression, right: ast::Expression) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::Assignment {
@@ -572,15 +572,15 @@ mod tests {
         }
     }
 
-    fn neg(operand: ast::Expression) -> ast::Expression {
+    pub fn neg(operand: ast::Expression) -> ast::Expression {
         unaryop(operand, ast::UnaryOperation::Neg)
     }
 
-    fn not(operand: ast::Expression) -> ast::Expression {
+    pub fn not(operand: ast::Expression) -> ast::Expression {
         unaryop(operand, ast::UnaryOperation::Not)
     }
 
-    fn unaryop(operand: ast::Expression, op: ast::UnaryOperation) -> ast::Expression {
+    pub fn unaryop(operand: ast::Expression, op: ast::UnaryOperation) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::UnaryOp {
@@ -590,14 +590,14 @@ mod tests {
         }
     }
 
-    fn block(expressions: Vec<ast::Expression>) -> ast::Expression {
+    pub fn block(expressions: Vec<ast::Expression>) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::Block { expressions },
         }
     }
 
-    fn while_do(condition: ast::Expression, do_expression: ast::Expression) -> ast::Expression {
+    pub fn while_do(condition: ast::Expression, do_expression: ast::Expression) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::While {
@@ -607,7 +607,7 @@ mod tests {
         }
     }
 
-    fn var_decl(name: &str, value: ast::Expression) -> ast::Expression {
+    pub fn var_decl(name: &str, value: ast::Expression) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::VarDeclaration {
