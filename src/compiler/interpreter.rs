@@ -1,45 +1,48 @@
 use crate::compiler::ast;
 
 #[derive(Debug, Clone, PartialEq)]
-enum Value {
+pub enum Value {
     Int(i32),
     Bool(bool),
     None,
 }
 
-fn interpret(node: ast::Expression) -> Result<Value, String> {
+pub fn interpret(node: ast::Expression) -> Result<Value, String> {
     match node.kind {
+        ast::ExpressionKind::NoneLiteral { .. } => Ok(Value::None),
         ast::ExpressionKind::IntLiteral { value } => Ok(Value::Int(value)),
-        _ => Err(format!("unexpected expression {:?}", node.kind)),
+        ast::ExpressionKind::BoolLiteral { value } => Ok(Value::Bool(value)),
+        ast::ExpressionKind::BinaryOp { left, right, op } => {
+            let a = interpret(*left)?;
+            let b = interpret(*right)?;
+            match (a, b, op) {
+                (Value::Int(a), Value::Int(b), ast::Operation::Addition) => Ok(Value::Int(a + b)),
+                (_, _, op) => Err(format!("unexpected operation {:?}", op)),
+            }
+        }
+        ast::ExpressionKind::If {
+            condition,
+            then_expression,
+            else_expression,
+        } => {
+            let cond = interpret(*condition)?;
+            match (cond, then_expression, else_expression) {
+                (Value::Bool(true), then_expression, _) => interpret(*then_expression),
+                (Value::Bool(false), _, Some(else_expression)) => interpret(*else_expression),
+                (cond, _, _) => Err(format!("unexpected condition {:?}", cond)),
+            }
+        }
+        kind => Err(format!("unexpected expression {:?}", kind)),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use crate::compiler::{common, parser, tokenizer};
-
-    fn loc() -> common::Location {
-        common::Location { line: 0, column: 0 }
-    }
-
-    fn interpret_without_loc(source_code: &str) -> Result<Value, String> {
-        let mut tokens = tokenizer::tokenize(source_code).unwrap();
-        tokens = tokens
-            .into_iter()
-            .map(|t| tokenizer::Token {
-                kind: t.kind,
-                text: t.text,
-                loc: loc(),
-            })
-            .collect();
-
-        interpret(parser::parse(tokens).unwrap())
-    }
+    use crate::compiler::parser::tests::*;
 
     #[test]
     fn test_interpreter_basics() {
-        assert_eq!(interpret_without_loc("2 + 3").unwrap(), Value::Int(5));
+        assert_eq!(interpret(eadd(eint(2), eint(3))).unwrap(), Value::Int(5));
     }
 }
