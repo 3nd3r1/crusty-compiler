@@ -322,5 +322,68 @@ pub mod tests {
                 tint("32")
             ]
         );
+        assert_eq!(
+            tokenize_without_loc(
+                "{
+                while f() do {
+                    x = 10;
+                    y = if g(x) then {
+                        x = x + 1;
+                        x
+                    } else {
+                        g(x)
+                    };
+                    g(y)
+                };
+                123
+            }"
+            ),
+            vec![
+                tpunc("{"),
+                tkeyw("while"),
+                tide("f"),
+                tpunc("("),
+                tpunc(")"),
+                tkeyw("do"),
+                tpunc("{"),
+                tide("x"),
+                tope("="),
+                tint("10"),
+                tpunc(";"),
+                tide("y"),
+                tope("="),
+                tkeyw("if"),
+                tide("g"),
+                tpunc("("),
+                tide("x"),
+                tpunc(")"),
+                tkeyw("then"),
+                tpunc("{"),
+                tide("x"),
+                tope("="),
+                tide("x"),
+                tope("+"),
+                tint("1"),
+                tpunc(";"),
+                tide("x"),
+                tpunc("}"),
+                tkeyw("else"),
+                tpunc("{"),
+                tide("g"),
+                tpunc("("),
+                tide("x"),
+                tpunc(")"),
+                tpunc("}"),
+                tpunc(";"),
+                tide("g"),
+                tpunc("("),
+                tide("y"),
+                tpunc(")"),
+                tpunc("}"),
+                tpunc(";"),
+                tint("123"),
+                tpunc("}")
+            ]
+        );
     }
 }
