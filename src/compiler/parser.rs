@@ -423,10 +423,14 @@ impl Parser {
         if self.peek().text == "(" {
             self.consume(tokenizer::TokenKind::Punctuation, Some("("))?;
             let mut param_types: Vec<types::Type> = vec![];
-            while self.peek().text != ")" {
+            loop {
                 let param_type = self.parse_type()?;
                 param_types.push(param_type);
-                self.consume(tokenizer::TokenKind::Punctuation, Some(","))?;
+                if self.peek().text == ")" {
+                    break;
+                } else {
+                    self.consume(tokenizer::TokenKind::Punctuation, Some(","))?;
+                }
             }
             self.consume(tokenizer::TokenKind::Punctuation, Some(")"))?;
             self.consume(tokenizer::TokenKind::Operator, Some("="))?;
