@@ -126,7 +126,7 @@ pub mod builtins {
 
     pub fn multiplication(args: Vec<Value>) -> Result<Value, String> {
         match (&args[0], &args[1]) {
-            (Value::Int(left), Value::Int(right)) => Ok(Value::Int(left - right)),
+            (Value::Int(left), Value::Int(right)) => Ok(Value::Int(left * right)),
             _ => Err(format!("expected two integers")),
         }
     }
