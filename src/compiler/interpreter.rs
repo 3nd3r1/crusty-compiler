@@ -162,5 +162,6 @@ mod tests {
     #[test]
     fn test_interpreter_unary() {
         assert_eq!(ip(&eneg(eint(2))).unwrap(), Value::Int(-2));
+        assert_eq!(ip(&eneg(eneg(eint(2)))).unwrap(), Value::Int(2));
     }
 }
