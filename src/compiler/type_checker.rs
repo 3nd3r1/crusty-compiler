@@ -110,7 +110,7 @@ pub fn typecheck(node: &ast::Expression, symtab: &Rc<RefCell<TypeSymTab>>) -> Re
                             ))
                         } else if params[0] != left_type || params[1] != right_type {
                             Err(format!(
-                                "operator {} expected params ({}, {}), got ({}, {})",
+                                "operator {} expected ({}, {}), got ({}, {})",
                                 op, params[0], params[1], left_type, right_type
                             ))
                         } else {
@@ -140,7 +140,7 @@ pub fn typecheck(node: &ast::Expression, symtab: &Rc<RefCell<TypeSymTab>>) -> Re
                     ))
                 } else if params[0] != operand_type {
                     Err(format!(
-                        "operator {} expected params ({}), got ({})",
+                        "operator {} expected ({}), got ({})",
                         op, params[0], operand_type
                     ))
                 } else {
@@ -206,9 +206,10 @@ pub fn typecheck(node: &ast::Expression, symtab: &Rc<RefCell<TypeSymTab>>) -> Re
             do_expression: _,
         } => {
             let condition_type = typecheck(&*condition, symtab)?;
-            if condition_type == Type::Bool {
+            if condition_type != Type::Bool {
                 Err(format!(
-                    "expected condition to be of type bool got {}",
+                    "expected condition to be of type {} got {}",
+                    Type::Bool,
                     condition_type
                 ))
             } else {
@@ -290,11 +291,10 @@ mod tests {
     #[test]
     fn test_typechecker_binary() {
         assert_eq!(tc(&eadd(eint(2), eint(3))).unwrap(), Type::Int);
-        dbg!(tc(&eadd(eint(2), ebool(false))).unwrap_err());
         assert!(
             tc(&eadd(eint(2), ebool(false)))
                 .unwrap_err()
-                .contains("operator + expected (Int, Int)")
+                .contains("operator + expected (Int, Int), got (Int, Bool)")
         );
     }
 
@@ -304,7 +304,7 @@ mod tests {
         assert!(
             tc(&enot(eint(2)))
                 .unwrap_err()
-                .contains("operator not expected something")
+                .contains("operator not expected (Bool), got (Int)")
         );
     }
 
@@ -319,14 +319,13 @@ mod tests {
             .unwrap(),
             Type::Int
         );
-
         assert!(
             tc(&eblock(vec![
                 evar("a", eint(3)),
                 eadd(eide("a"), eide("b"))
             ]))
             .unwrap_err()
-            .contains("something")
+            .contains("undefined identifier: b")
         );
     }
 
@@ -342,7 +341,7 @@ mod tests {
                 eide("a")
             ]))
             .unwrap(),
-            Type::Unit
+            Type::Int
         );
     }
 }
