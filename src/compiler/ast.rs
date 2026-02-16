@@ -61,6 +61,7 @@ impl std::fmt::Display for UnaryOperation {
 pub struct Expression {
     pub kind: ExpressionKind,
     pub loc: Location,
+    pub return_type: Option<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
