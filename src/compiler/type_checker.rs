@@ -86,7 +86,7 @@ pub fn typecheck(node: &ast::Expression, symtab: &Rc<RefCell<TypeSymTab>>) -> Re
                 ast::Operation::Equal | ast::Operation::NotEqual => {
                     if left_type != right_type {
                         Err(format!(
-                            "operator {} expected types {:?} and {:?} to be equal",
+                            "operator {} expected types {} and {} to be equal",
                             op, left_type, right_type
                         ))
                     } else {
@@ -102,10 +102,16 @@ pub fn typecheck(node: &ast::Expression, symtab: &Rc<RefCell<TypeSymTab>>) -> Re
                         return_type,
                     } = func_type
                     {
-                        if params.len() != 2 || params[0] != left_type || params[1] != right_type {
+                        if params.len() != 2 {
                             Err(format!(
-                                "operator {} expected {:?} got ({:?}, {:?})",
-                                op, params, left, right
+                                "operator {} expected {} params, got 2",
+                                op,
+                                params.len()
+                            ))
+                        } else if params[0] != left_type || params[1] != right_type {
+                            Err(format!(
+                                "operator {} expected params ({}, {}), got ({}, {})",
+                                op, params[0], params[1], left_type, right_type
                             ))
                         } else {
                             Ok(*return_type)
@@ -126,10 +132,16 @@ pub fn typecheck(node: &ast::Expression, symtab: &Rc<RefCell<TypeSymTab>>) -> Re
                 return_type,
             } = func
             {
-                if params.len() != 1 || params[0] != operand_type {
+                if params.len() != 1 {
                     Err(format!(
-                        "operator {} expected {:?} got ({:?})",
-                        op, params, operand
+                        "operator {} expected {} params, got 1",
+                        op,
+                        params.len()
+                    ))
+                } else if params[0] != operand_type {
+                    Err(format!(
+                        "operator {} expected params ({}), got ({})",
+                        op, params[0], operand_type
                     ))
                 } else {
                     Ok(*return_type)
@@ -146,7 +158,7 @@ pub fn typecheck(node: &ast::Expression, symtab: &Rc<RefCell<TypeSymTab>>) -> Re
             let condition_type = typecheck(&*condition, symtab)?;
             if condition_type != Type::Bool {
                 Err(format!(
-                    "expected condition to be of type bool got {:?}",
+                    "expected condition to be of type bool got {}",
                     condition_type
                 ))
             } else {
@@ -156,7 +168,7 @@ pub fn typecheck(node: &ast::Expression, symtab: &Rc<RefCell<TypeSymTab>>) -> Re
 
                     if then_type != else_type {
                         return Err(format!(
-                            "expected then_expression and else_expression to be same type, got {:?} and {:?}",
+                            "expected then_expression and else_expression to be same type, got {} and {}",
                             then_type, else_type
                         ));
                     }
@@ -196,7 +208,7 @@ pub fn typecheck(node: &ast::Expression, symtab: &Rc<RefCell<TypeSymTab>>) -> Re
             let condition_type = typecheck(&*condition, symtab)?;
             if condition_type == Type::Bool {
                 Err(format!(
-                    "expected condition to be of type bool got {:?}",
+                    "expected condition to be of type bool got {}",
                     condition_type
                 ))
             } else {
@@ -278,6 +290,7 @@ mod tests {
     #[test]
     fn test_typechecker_binary() {
         assert_eq!(tc(&eadd(eint(2), eint(3))).unwrap(), Type::Int);
+        dbg!(tc(&eadd(eint(2), ebool(false))).unwrap_err());
         assert!(
             tc(&eadd(eint(2), ebool(false)))
                 .unwrap_err()
