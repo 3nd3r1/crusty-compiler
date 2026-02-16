@@ -46,6 +46,7 @@ pub fn interpret(node: &ast::Expression, symtab: &mut SymTab) -> Result<Value, S
         ast::ExpressionKind::NoneLiteral { .. } => Ok(Value::None),
         ast::ExpressionKind::IntLiteral { value } => Ok(Value::Int(*value)),
         ast::ExpressionKind::BoolLiteral { value } => Ok(Value::Bool(*value)),
+        ast::ExpressionKind::Identifier { value } => symtab.lookup(value),
         ast::ExpressionKind::BinaryOp { left, right, op } => {
             let left = interpret(&*left, symtab)?;
             let right = interpret(&*right, symtab)?;
@@ -88,6 +89,11 @@ pub fn interpret(node: &ast::Expression, symtab: &mut SymTab) -> Result<Value, S
             symtab.locals.insert(name.clone(), value);
             Ok(Value::None)
         }
+        ast::ExpressionKind::Assignment { name, right } => {
+            let value = interpret(&*right, symtab)?;
+            symtab.locals.insert(name.clone(), value.clone());
+            Ok(value)
+        }
         ast::ExpressionKind::Block { expressions } => {
             let mut block_symtab = SymTab {
                 locals: HashMap::new(),
@@ -98,7 +104,7 @@ pub fn interpret(node: &ast::Expression, symtab: &mut SymTab) -> Result<Value, S
                 for expression in expressions {
                     interpret(expression, &mut block_symtab)?;
                 }
-                interpret(last, symtab)
+                interpret(last, &mut block_symtab)
             } else {
                 Ok(Value::None)
             }
