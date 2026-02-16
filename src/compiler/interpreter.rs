@@ -328,4 +328,20 @@ mod tests {
             Value::Int(6)
         );
     }
+
+    #[test]
+    fn test_interpreter_short_circuit() {
+        assert_eq!(
+            ip(&eblock(vec![
+                evar("a", ebool(false)),
+                eor(
+                    ebool(true),
+                    eblock(vec![eassign("a", ebool(true)), ebool(true)])
+                ),
+                eide("a")
+            ]))
+            .unwrap(),
+            Value::Bool(false)
+        );
+    }
 }
