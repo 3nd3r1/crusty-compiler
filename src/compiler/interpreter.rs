@@ -288,4 +288,27 @@ mod tests {
         assert_eq!(ip(&eneg(eneg(eint(2)))).unwrap(), Value::Int(2));
         assert_eq!(ip(&enot(ebool(true))).unwrap(), Value::Bool(false));
     }
+
+    #[test]
+    fn test_interpreter_assignment() {
+        assert_eq!(
+            ip(&eblock(vec![
+                evar("a", eint(3)),
+                evar("b", eint(2)),
+                eadd(eide("a"), eide("b"))
+            ]))
+            .unwrap(),
+            Value::Int(5)
+        );
+
+        assert_eq!(
+            ip(&eblock(vec![
+                evar("a", eint(3)),
+                evar("b", eint(2)),
+                eassign("a", eassign("b", eint(6)))
+            ]))
+            .unwrap(),
+            Value::Int(6)
+        );
+    }
 }
