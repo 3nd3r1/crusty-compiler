@@ -77,12 +77,12 @@ pub fn typecheck(node: &ast::Expression, symtab: &Rc<RefCell<TypeSymTab>>) -> Re
                 }
                 _ => {
                     let identifier = op.to_string();
-                    let func = symtab.borrow().lookup(&identifier)?;
+                    let func_type = symtab.borrow().lookup(&identifier)?;
 
                     if let Type::Function {
                         params,
                         return_type,
-                    } = func
+                    } = func_type
                     {
                         if params.len() != 2 || params[0] != left_type || params[1] != right_type {
                             Err(format!(
@@ -99,7 +99,7 @@ pub fn typecheck(node: &ast::Expression, symtab: &Rc<RefCell<TypeSymTab>>) -> Re
             }
         }
         ast::ExpressionKind::UnaryOp { operand, op } => {
-            let operand = typecheck(&*operand, symtab)?;
+            let operand_type = typecheck(&*operand, symtab)?;
 
             let identifier = format!("unary_{}", op);
             let func = symtab.borrow().lookup(&identifier)?;
@@ -108,7 +108,7 @@ pub fn typecheck(node: &ast::Expression, symtab: &Rc<RefCell<TypeSymTab>>) -> Re
                 return_type,
             } = func
             {
-                if params.len() != 1 || params[0] != operand {
+                if params.len() != 1 || params[0] != operand_type {
                     Err(format!(
                         "operator {} expected {:?} got ({:?})",
                         op, params, operand
