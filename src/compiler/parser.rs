@@ -111,22 +111,32 @@ impl Parser {
 
     fn parse_assignment(&mut self) -> Result<ast::Expression, String> {
         let left = self.parse_binary_operation(0)?;
+
         if self.peek().kind == tokenizer::TokenKind::Operator && self.peek().text.as_str() == "=" {
             let loc = self
                 .consume(tokenizer::TokenKind::Operator, Some("="))?
                 .loc
                 .clone();
-            let right = self.parse_assignment()?;
+            if let ast::ExpressionKind::Identifier { value } = left.kind {
+                let name = value.clone();
+                let right = self.parse_assignment()?;
 
-            return Ok(ast::Expression {
-                loc,
-                kind: ast::ExpressionKind::Assignment {
-                    left: Box::new(left),
-                    right: Box::new(right),
-                },
-            });
+                Ok(ast::Expression {
+                    loc,
+                    kind: ast::ExpressionKind::Assignment {
+                        name,
+                        right: Box::new(right),
+                    },
+                })
+            } else {
+                Err(format!(
+                    "{:?}: Left side of assignment must be a variable name",
+                    loc
+                ))
+            }
+        } else {
+            Ok(left)
         }
-        Ok(left)
     }
 
     fn parse_binary_operation(&mut self, level: usize) -> Result<ast::Expression, String> {
@@ -544,11 +554,11 @@ pub mod tests {
         }
     }
 
-    pub fn eassign(left: ast::Expression, right: ast::Expression) -> ast::Expression {
+    pub fn eassign(name: &str, right: ast::Expression) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::Assignment {
-                left: Box::new(left),
+                name: name.to_string(),
                 right: Box::new(right),
             },
         }
@@ -833,7 +843,7 @@ pub mod tests {
     fn test_parser_assignment() {
         assert_eq!(
             parse(vec![tide("a"), tope("="), tint("3"), tend()]).unwrap(),
-            eassign(eide("a"), eint(3))
+            eassign("a", eint(3))
         );
         assert_eq!(
             parse(vec![
@@ -845,7 +855,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eassign(eide("hello"), eadd(eide("a"), eint(3)))
+            eassign("hello", eadd(eide("a"), eint(3)))
         );
         assert_eq!(
             parse(vec![
@@ -857,15 +867,13 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eassign(eide("a"), eassign(eide("b"), eide("c")))
+            eassign("a", eassign("b", eide("c")))
         );
         assert_eq!(
             parse(vec![
                 tide("f"),
                 tpunc("("),
                 tide("a"),
-                tope("+"),
-                tide("b"),
                 tope("="),
                 tide("b"),
                 tope("-"),
@@ -874,13 +882,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            ecall(
-                "f",
-                vec![eassign(
-                    eadd(eide("a"), eide("b")),
-                    esub(eide("b"), eide("c"))
-                )]
-            )
+            ecall("f", vec![eassign("a", esub(eide("b"), eide("c")))])
         );
     }
 
@@ -979,8 +981,8 @@ pub mod tests {
             ])
             .unwrap(),
             eblock(vec![
-                eassign(eide("a"), eint(1)),
-                eassign(eide("b"), eint(2)),
+                eassign("a", eint(1)),
+                eassign("b", eint(2)),
                 eadd(eide("a"), eide("b"))
             ])
         );
@@ -1023,10 +1025,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eassign(
-                eide("x"),
-                eblock(vec![ecall("f", vec![eide("a")]), eide("b")])
-            )
+            eassign("x", eblock(vec![ecall("f", vec![eide("a")]), eide("b")]))
         );
     }
 
@@ -1085,15 +1084,12 @@ pub mod tests {
                 ewhile(
                     ecall("f", vec![]),
                     eblock(vec![
-                        eassign(eide("x"), eint(10)),
+                        eassign("x", eint(10)),
                         eassign(
-                            eide("y"),
+                            "y",
                             eif(
                                 ecall("g", vec![eide("x")]),
-                                eblock(vec![
-                                    eassign(eide("x"), eadd(eide("x"), eint(1))),
-                                    eide("x")
-                                ]),
+                                eblock(vec![eassign("x", eadd(eide("x"), eint(1))), eide("x")]),
                                 Some(eblock(vec![ecall("g", vec![eide("x")])]))
                             )
                         ),
@@ -1362,7 +1358,7 @@ pub mod tests {
             ])
             .unwrap(),
             eassign(
-                eide("x"),
+                "x",
                 eblock(vec![
                     eblock(vec![ecall("f", vec![eide("a")])]),
                     eblock(vec![eide("b")])
