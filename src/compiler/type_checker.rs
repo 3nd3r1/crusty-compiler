@@ -190,3 +190,78 @@ pub fn typecheck(node: &ast::Expression, symtab: &Rc<RefCell<TypeSymTab>>) -> Re
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::compiler::parser::tests::*;
+
+    fn empty_symtab() -> TypeSymTab {
+        TypeSymTab {
+            locals: HashMap::new(),
+            parent: None,
+        }
+    }
+
+    fn tc(node: &ast::Expression) -> Result<Type, String> {
+        typecheck(node, &Rc::new(RefCell::new(empty_symtab())))
+    }
+
+    #[test]
+    fn test_typechecker_binary() {
+        assert_eq!(tc(&eadd(eint(2), eint(3))).unwrap(), Type::Int);
+        assert!(
+            tc(&eadd(eint(2), ebool(false)))
+                .unwrap_err()
+                .contains("operator + expected (Int, Int)")
+        );
+    }
+
+    #[test]
+    fn test_typechecker_unary() {
+        assert_eq!(tc(&eneg(eint(2))).unwrap(), Type::Int);
+        assert!(
+            tc(&enot(eint(2)))
+                .unwrap_err()
+                .contains("operator not expected something")
+        );
+    }
+
+    #[test]
+    fn test_typechecker_assignment() {
+        assert_eq!(
+            tc(&eblock(vec![
+                evar("a", eint(3)),
+                evar("b", eint(2)),
+                eadd(eide("a"), eide("b"))
+            ]))
+            .unwrap(),
+            Type::Int
+        );
+
+        assert!(
+            tc(&eblock(vec![
+                evar("a", eint(3)),
+                eadd(eide("a"), eide("b"))
+            ]))
+            .unwrap_err()
+            .contains("something")
+        );
+    }
+
+    #[test]
+    fn test_typechecker_while() {
+        assert_eq!(
+            tc(&eblock(vec![
+                evar("a", eint(0)),
+                ewhile(
+                    elt(eide("a"), eint(5)),
+                    eassign("a", eadd(eide("a"), eint(1)))
+                ),
+                eide("a")
+            ]))
+            .unwrap(),
+            Type::Unit
+        );
+    }
+}
