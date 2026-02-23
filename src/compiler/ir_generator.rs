@@ -131,6 +131,22 @@ mod tests {
         generate_ir(get_reserved_names(), &mut node)
     }
 
+    fn assert_ir_eq(left: Vec<ir::Instruction>, right: Vec<ir::Instruction>) {
+        assert!(
+            left == right,
+            "expected:\n{}\ngot:\n{}\n",
+            right
+                .iter()
+                .map(|i| format!("{}", i))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            left.iter()
+                .map(|i| format!("{}", i))
+                .collect::<Vec<_>>()
+                .join("\n"),
+        )
+    }
+
     fn ilic(value: i32, dest: &str) -> ir::Instruction {
         ir::Instruction::load_int_const(
             value,
@@ -180,16 +196,16 @@ mod tests {
 
     #[test]
     fn test_ir_generator_math() {
-        assert_eq!(
+        assert_ir_eq(
             gi(eadd(eint(1), emul(eint(2), eint(3)))).unwrap(),
             vec![
-                ilic(1, "x0"),
+                ilic(1, "x"),
                 ilic(2, "x2"),
                 ilic(3, "x3"),
                 imul("x2", "x3", "x4"),
-                iadd("x0", "x4", "x5"),
-                iprint("x5", "x6")
-            ]
+                iadd("x", "x4", "x5"),
+                iprint("x5", "x6"),
+            ],
         );
     }
 }
