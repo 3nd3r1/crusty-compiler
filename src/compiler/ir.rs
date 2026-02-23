@@ -103,3 +103,47 @@ impl Instruction {
         }
     }
 }
+
+impl std::fmt::Display for IRVar {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
+impl std::fmt::Display for Label {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
+impl std::fmt::Display for Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match &self.kind {
+            InstructionKind::LoadIntConst { value, dest } => {
+                write!(f, "LoadIntCost({}, {})", value, dest)
+            }
+            InstructionKind::LoadBoolConst { value, dest } => {
+                write!(f, "LoadBoolCost({}, {})", value, dest)
+            }
+            InstructionKind::Copy { source, dest } => {
+                write!(f, "Copy({}, {})", source, dest)
+            }
+            InstructionKind::Call { fun, args, dest } => {
+                write!(f, "Call({}, {:?}, {})", fun, args, dest)
+            }
+            InstructionKind::Jump { label } => {
+                write!(f, "Jump({})", label)
+            }
+            InstructionKind::CondJump {
+                cond,
+                then_label,
+                else_label,
+            } => {
+                write!(f, "CondJump({}, {}, {})", cond, then_label, else_label)
+            }
+            InstructionKind::Label { label } => {
+                write!(f, "Label({})", label)
+            }
+        }
+    }
+}
