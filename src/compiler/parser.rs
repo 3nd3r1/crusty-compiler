@@ -1,4 +1,4 @@
-use crate::compiler::{ast, tokenizer, type_checker::types};
+use crate::compiler::{ast, tokenizer, types};
 
 struct Parser {
     tokens: Vec<tokenizer::Token>,
