@@ -1,5 +1,5 @@
 use crate::compiler::common::Location;
-use crate::compiler::type_checker::types::Type;
+use crate::compiler::types::Type;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Operation {
