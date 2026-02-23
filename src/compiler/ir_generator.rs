@@ -4,44 +4,9 @@ use std::{
     rc::Rc,
 };
 
-use crate::compiler::{ast, ir};
+use crate::compiler::{ast, common::SymTab, ir};
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct IrSymTab {
-    pub locals: HashMap<String, ir::IRVar>,
-    pub parent: Option<Rc<RefCell<IrSymTab>>>,
-}
-
-impl IrSymTab {
-    fn lookup(&self, identifier: &str) -> Result<ir::IRVar, String> {
-        if let Some(value) = self.locals.get(identifier) {
-            Ok(value.clone())
-        } else {
-            if let Some(parent) = &self.parent {
-                parent.borrow().lookup(identifier)
-            } else {
-                Err(format!("undefined identifier: {}", identifier))
-            }
-        }
-    }
-
-    fn declare(&mut self, identifier: &str, value: ir::IRVar) {
-        self.locals.insert(identifier.to_string(), value);
-    }
-
-    fn assign(&mut self, identifier: &str, value: ir::IRVar) -> Result<(), String> {
-        if let Some(_) = self.locals.get(identifier) {
-            self.locals.insert(identifier.to_string(), value.clone());
-            Ok(())
-        } else {
-            if let Some(parent) = &self.parent {
-                parent.borrow_mut().assign(identifier, value)
-            } else {
-                Err(format!("undefined identifier: {}", identifier))
-            }
-        }
-    }
-}
+type IrSymTab = SymTab<ir::IRVar>;
 
 struct IrGenerator {
     ins: Vec<ir::Instruction>,

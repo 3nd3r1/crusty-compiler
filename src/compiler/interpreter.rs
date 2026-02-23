@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::compiler::ast;
+use crate::compiler::{ast, common::SymTab};
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -21,44 +21,12 @@ impl PartialEq for Value {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct SymTab {
-    pub locals: HashMap<String, Value>,
-    pub parent: Option<Rc<RefCell<SymTab>>>,
-}
+type ValueSymTab = SymTab<Value>;
 
-impl SymTab {
-    fn lookup(&self, identifier: &str) -> Result<Value, String> {
-        if let Some(value) = self.locals.get(identifier) {
-            Ok(value.clone())
-        } else {
-            if let Some(parent) = &self.parent {
-                parent.borrow().lookup(identifier)
-            } else {
-                Err(format!("undefined identifier: {}", identifier))
-            }
-        }
-    }
-
-    fn declare(&mut self, identifier: &str, value: Value) {
-        self.locals.insert(identifier.to_string(), value);
-    }
-
-    fn assign(&mut self, identifier: &str, value: Value) -> Result<(), String> {
-        if let Some(_) = self.locals.get(identifier) {
-            self.locals.insert(identifier.to_string(), value.clone());
-            Ok(())
-        } else {
-            if let Some(parent) = &self.parent {
-                parent.borrow_mut().assign(identifier, value)
-            } else {
-                Err(format!("undefined identifier: {}", identifier))
-            }
-        }
-    }
-}
-
-pub fn interpret(node: &ast::Expression, symtab: &Rc<RefCell<SymTab>>) -> Result<Value, String> {
+pub fn interpret(
+    node: &ast::Expression,
+    symtab: &Rc<RefCell<ValueSymTab>>,
+) -> Result<Value, String> {
     match &node.kind {
         ast::ExpressionKind::NoneLiteral { .. } => Ok(Value::None),
         ast::ExpressionKind::IntLiteral { value } => Ok(Value::Int(*value)),
@@ -121,7 +89,7 @@ pub fn interpret(node: &ast::Expression, symtab: &Rc<RefCell<SymTab>>) -> Result
             Ok(value)
         }
         ast::ExpressionKind::Block { expressions } => {
-            let block_symtab = Rc::new(RefCell::new(SymTab {
+            let block_symtab = Rc::new(RefCell::new(ValueSymTab {
                 locals: HashMap::new(),
                 parent: Some(Rc::clone(symtab)),
             }));
@@ -303,8 +271,8 @@ mod tests {
     use super::*;
     use crate::compiler::parser::tests::*;
 
-    fn empty_symtab() -> SymTab {
-        SymTab {
+    fn empty_symtab() -> ValueSymTab {
+        ValueSymTab {
             locals: builtins::build_builtin_lib(),
             parent: None,
         }
