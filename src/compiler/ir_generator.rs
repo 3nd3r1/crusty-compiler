@@ -253,10 +253,6 @@ mod tests {
         )
     }
 
-    fn iprint(var: &str, dest: &str) -> ir::Instruction {
-        icall("print_int", vec![var], dest)
-    }
-
     fn icall(fun: &str, args: Vec<&str>, dest: &str) -> ir::Instruction {
         ir::Instruction::call(
             ir::IRVar {
@@ -284,8 +280,16 @@ mod tests {
                 ilic(3, "x3"),
                 imul("x2", "x3", "x4"),
                 iadd("x", "x4", "x5"),
-                iprint("x5", "x6"),
             ],
+        );
+    }
+
+    #[test]
+    fn test_ir_if() {
+        // This is basically a manual test to and you have to verify the output manually
+        assert_ir_eq(
+            gi(eif(ebool(true), eint(0), Some(eint(1)))).unwrap(),
+            vec![],
         );
     }
 }
