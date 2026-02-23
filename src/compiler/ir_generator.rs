@@ -16,10 +16,15 @@ struct IrGenerator {
 
 impl IrGenerator {
     fn new_var(&mut self) -> ir::IRVar {
-        let new_var_string = format!("x{}", self.var_counter);
         self.var_counter += 1;
-        ir::IRVar {
-            name: new_var_string,
+        if self.var_counter == 1 {
+            ir::IRVar {
+                name: "x".to_string(),
+            }
+        } else {
+            ir::IRVar {
+                name: format!("x{}", self.var_counter),
+            }
         }
     }
 
