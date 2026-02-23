@@ -30,27 +30,36 @@ impl IrGenerator {
             }),
             ast::ExpressionKind::IntLiteral { value } => {
                 let var = self.new_var();
-                self.ins.push(ir::Instruction {
-                    kind: ir::InstructionKind::LoadIntConst {
-                        value: *value,
-                        dest: var.clone(),
-                    },
-                    location: node.loc.clone(),
-                });
+                self.ins.push(ir::Instruction::load_int_const(
+                    value.clone(),
+                    var.clone(),
+                    node.loc.clone(),
+                ));
                 Ok(var)
             }
             ast::ExpressionKind::BoolLiteral { value } => {
                 let var = self.new_var();
-                self.ins.push(ir::Instruction {
-                    kind: ir::InstructionKind::LoadBoolConst {
-                        value: *value,
-                        dest: var.clone(),
-                    },
-                    location: node.loc.clone(),
-                });
+                self.ins.push(ir::Instruction::load_bool_const(
+                    value.clone(),
+                    var.clone(),
+                    node.loc.clone(),
+                ));
                 Ok(var)
             }
             ast::ExpressionKind::Identifier { value } => self.symtab.borrow().lookup(&value),
+            ast::ExpressionKind::BinaryOp { left, right, op } => {
+                let var_op = self.symtab.borrow().lookup(&op.to_string())?;
+                let var_left = self.visit(left)?;
+                let var_right = self.visit(right)?;
+                let var_result = self.new_var();
+                self.ins.push(ir::Instruction::call(
+                    var_op,
+                    vec![var_left, var_right],
+                    var_result.clone(),
+                    node.loc.clone(),
+                ));
+                Ok(var_result)
+            }
             _ => Err(format!(
                 "{:?}: unsupported expression: {:?}",
                 node.loc, node
