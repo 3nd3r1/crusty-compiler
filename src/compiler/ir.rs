@@ -47,3 +47,59 @@ pub enum InstructionKind {
         label: Label,
     },
 }
+
+impl Instruction {
+    pub fn load_int_const(value: i32, dest: IRVar, location: Location) -> Self {
+        Instruction {
+            kind: InstructionKind::LoadIntConst { value, dest },
+            location,
+        }
+    }
+    pub fn load_bool_const(value: bool, dest: IRVar, location: Location) -> Self {
+        Instruction {
+            kind: InstructionKind::LoadBoolConst { value, dest },
+            location,
+        }
+    }
+    pub fn copy(source: IRVar, dest: IRVar, location: Location) -> Self {
+        Instruction {
+            kind: InstructionKind::Copy { source, dest },
+            location,
+        }
+    }
+    pub fn call(fun: IRVar, args: Vec<IRVar>, dest: IRVar, location: Location) -> Self {
+        Instruction {
+            kind: InstructionKind::Call { fun, args, dest },
+            location,
+        }
+    }
+    pub fn jump(label: Label, location: Location) -> Self {
+        Instruction {
+            kind: InstructionKind::Jump { label },
+            location,
+        }
+    }
+    pub fn cond_jump(
+        cond: IRVar,
+        then_label: Label,
+        else_label: Label,
+        location: Location,
+    ) -> Self {
+        Instruction {
+            kind: InstructionKind::CondJump {
+                cond,
+                then_label,
+                else_label,
+            },
+            location,
+        }
+    }
+    pub fn label(name: String, location: Location) -> Self {
+        Instruction {
+            kind: InstructionKind::Label {
+                label: Label { name },
+            },
+            location,
+        }
+    }
+}
