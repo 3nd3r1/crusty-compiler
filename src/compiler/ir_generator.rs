@@ -178,11 +178,11 @@ mod tests {
         assert_eq!(
             gi(eadd(eint(1), emul(eint(2), eint(3)))).unwrap(),
             vec![
-                ilic(1, "x"),
+                ilic(1, "x0"),
                 ilic(2, "x2"),
                 ilic(3, "x3"),
                 imul("x2", "x3", "x4"),
-                iadd("x", "x4", "x5"),
+                iadd("x0", "x4", "x5"),
                 iprint("x5", "x6")
             ]
         );
