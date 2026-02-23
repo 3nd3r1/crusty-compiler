@@ -14,7 +14,6 @@ pub struct Label {
 pub struct Instruction {
     pub kind: InstructionKind,
     pub location: Location,
-    pub name: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
