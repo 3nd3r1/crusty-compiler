@@ -11,11 +11,16 @@ type IrSymTab = SymTab<ir::IRVar>;
 struct IrGenerator {
     ins: Vec<ir::Instruction>,
     symtab: Rc<RefCell<IrSymTab>>,
+    var_counter: u32,
 }
 
 impl IrGenerator {
     fn new_var(&mut self) -> ir::IRVar {
-        todo!()
+        let new_var_string = format!("x{}", self.var_counter);
+        self.var_counter += 1;
+        ir::IRVar {
+            name: new_var_string,
+        }
     }
 
     fn generate(&mut self, node: &mut ast::Expression) -> Result<Vec<ir::Instruction>, String> {
@@ -83,6 +88,7 @@ pub fn generate_ir(
     let mut ir_generator = IrGenerator {
         ins: Vec::new(),
         symtab: Rc::new(RefCell::new(root_symtab)),
+        var_counter: 0,
     };
     ir_generator.generate(root_expr)
 }
