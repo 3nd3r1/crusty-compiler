@@ -5,5 +5,6 @@ pub mod ir;
 pub mod ir_generator;
 pub mod parser;
 pub mod tokenizer;
+pub mod tokens;
 pub mod type_checker;
 pub mod types;

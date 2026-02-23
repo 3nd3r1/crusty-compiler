@@ -1,21 +1,21 @@
-use crate::compiler::{ast, tokenizer, types};
+use crate::compiler::{
+    ast,
+    tokens::{Token, TokenKind},
+    types,
+};
 
 struct Parser {
-    tokens: Vec<tokenizer::Token>,
+    tokens: Vec<Token>,
     pos: usize,
     binary_operators: Vec<Vec<String>>,
 }
 
 impl Parser {
-    fn peek(&self) -> &tokenizer::Token {
+    fn peek(&self) -> &Token {
         self.tokens.get(self.pos).unwrap()
     }
 
-    fn consume(
-        &mut self,
-        token_kind: tokenizer::TokenKind,
-        expected: Option<&str>,
-    ) -> Result<&tokenizer::Token, String> {
+    fn consume(&mut self, token_kind: TokenKind, expected: Option<&str>) -> Result<&Token, String> {
         let token = &self.tokens[self.pos];
 
         if token.kind != token_kind {
@@ -46,10 +46,8 @@ impl Parser {
         let loc = self.peek().loc.clone();
         let mut expressions = vec![];
 
-        while self.peek().kind != tokenizer::TokenKind::End {
-            if self.peek().kind == tokenizer::TokenKind::Keyword
-                && self.peek().text.as_str() == "var"
-            {
+        while self.peek().kind != TokenKind::End {
+            if self.peek().kind == TokenKind::Keyword && self.peek().text.as_str() == "var" {
                 expressions.push(self.parse_var_declaration()?);
             } else {
                 expressions.push(self.parse_expression()?);
@@ -62,11 +60,11 @@ impl Parser {
                     break;
                 }
             } else {
-                self.consume(tokenizer::TokenKind::Punctuation, Some(";"))?;
+                self.consume(TokenKind::Punctuation, Some(";"))?;
             }
         }
 
-        if self.peek().kind != tokenizer::TokenKind::End {
+        if self.peek().kind != TokenKind::End {
             return Err(format!(
                 "{:?}: expected End got {:?}",
                 self.peek().loc,
@@ -86,22 +84,16 @@ impl Parser {
     }
 
     fn parse_var_declaration(&mut self) -> Result<ast::Expression, String> {
-        let loc = self
-            .consume(tokenizer::TokenKind::Keyword, Some("var"))?
-            .loc
-            .clone();
-        let name = self
-            .consume(tokenizer::TokenKind::Identifier, None)?
-            .text
-            .clone();
+        let loc = self.consume(TokenKind::Keyword, Some("var"))?.loc.clone();
+        let name = self.consume(TokenKind::Identifier, None)?.text.clone();
 
         let mut value_type: Option<types::Type> = None;
         if self.peek().text == ":" {
-            self.consume(tokenizer::TokenKind::Punctuation, Some(":"))?;
+            self.consume(TokenKind::Punctuation, Some(":"))?;
             value_type = Some(self.parse_type()?);
         }
 
-        self.consume(tokenizer::TokenKind::Operator, Some("="))?;
+        self.consume(TokenKind::Operator, Some("="))?;
         let value = self.parse_expression()?;
 
         Ok(ast::Expression {
@@ -122,11 +114,8 @@ impl Parser {
     fn parse_assignment(&mut self) -> Result<ast::Expression, String> {
         let left = self.parse_binary_operation(0)?;
 
-        if self.peek().kind == tokenizer::TokenKind::Operator && self.peek().text.as_str() == "=" {
-            let loc = self
-                .consume(tokenizer::TokenKind::Operator, Some("="))?
-                .loc
-                .clone();
+        if self.peek().kind == TokenKind::Operator && self.peek().text.as_str() == "=" {
+            let loc = self.consume(TokenKind::Operator, Some("="))?.loc.clone();
             if let ast::ExpressionKind::Identifier { value } = left.kind {
                 let name = value.clone();
                 let right = self.parse_assignment()?;
@@ -159,9 +148,7 @@ impl Parser {
 
         let mut left = self.parse_binary_operation(level + 1)?;
 
-        while self.peek().kind == tokenizer::TokenKind::Operator
-            && operators.contains(&self.peek().text)
-        {
+        while self.peek().kind == TokenKind::Operator && operators.contains(&self.peek().text) {
             let loc = self.peek().loc.clone();
             let operation = self.parse_operation()?;
             let right = self.parse_binary_operation(level + 1)?;
@@ -200,19 +187,19 @@ impl Parser {
 
     fn parse_primary(&mut self) -> Result<ast::Expression, String> {
         match self.peek().kind {
-            tokenizer::TokenKind::IntLiteral => return self.parse_int_literal(),
-            tokenizer::TokenKind::Identifier => return self.parse_identifier(),
-            tokenizer::TokenKind::BoolLiteral => return self.parse_bool_literal(),
-            tokenizer::TokenKind::Punctuation if self.peek().text.as_str() == "(" => {
+            TokenKind::IntLiteral => return self.parse_int_literal(),
+            TokenKind::Identifier => return self.parse_identifier(),
+            TokenKind::BoolLiteral => return self.parse_bool_literal(),
+            TokenKind::Punctuation if self.peek().text.as_str() == "(" => {
                 return self.parse_parenthesized();
             }
-            tokenizer::TokenKind::Keyword if self.peek().text.as_str() == "if" => {
+            TokenKind::Keyword if self.peek().text.as_str() == "if" => {
                 return self.parse_if();
             }
-            tokenizer::TokenKind::Punctuation if self.peek().text.as_str() == "{" => {
+            TokenKind::Punctuation if self.peek().text.as_str() == "{" => {
                 return self.parse_block();
             }
-            tokenizer::TokenKind::Keyword if self.peek().text.as_str() == "while" => {
+            TokenKind::Keyword if self.peek().text.as_str() == "while" => {
                 return self.parse_while();
             }
             _ => {
@@ -226,7 +213,7 @@ impl Parser {
     }
 
     fn parse_int_literal(&mut self) -> Result<ast::Expression, String> {
-        let token = self.consume(tokenizer::TokenKind::IntLiteral, None)?;
+        let token = self.consume(TokenKind::IntLiteral, None)?;
         let loc = token.loc.clone();
         Ok(ast::Expression {
             loc,
@@ -241,12 +228,11 @@ impl Parser {
     }
 
     fn parse_identifier(&mut self) -> Result<ast::Expression, String> {
-        let token = self.consume(tokenizer::TokenKind::Identifier, None)?;
+        let token = self.consume(TokenKind::Identifier, None)?;
         let loc = token.loc.clone();
         let name = token.text.clone();
 
-        if self.peek().kind == tokenizer::TokenKind::Punctuation && self.peek().text.as_str() == "("
-        {
+        if self.peek().kind == TokenKind::Punctuation && self.peek().text.as_str() == "(" {
             return self.parse_function_call(name);
         }
 
@@ -258,7 +244,7 @@ impl Parser {
     }
 
     fn parse_bool_literal(&mut self) -> Result<ast::Expression, String> {
-        let token = self.consume(tokenizer::TokenKind::BoolLiteral, None)?;
+        let token = self.consume(TokenKind::BoolLiteral, None)?;
         let loc = token.loc.clone();
         Ok(ast::Expression {
             loc,
@@ -273,31 +259,26 @@ impl Parser {
     }
 
     fn parse_parenthesized(&mut self) -> Result<ast::Expression, String> {
-        self.consume(tokenizer::TokenKind::Punctuation, Some("("))?;
+        self.consume(TokenKind::Punctuation, Some("("))?;
         let expression = self.parse_expression()?;
-        self.consume(tokenizer::TokenKind::Punctuation, Some(")"))?;
+        self.consume(TokenKind::Punctuation, Some(")"))?;
 
         Ok(expression)
     }
 
     fn parse_if(&mut self) -> Result<ast::Expression, String> {
-        let loc = self
-            .consume(tokenizer::TokenKind::Keyword, Some("if"))?
-            .loc
-            .clone();
+        let loc = self.consume(TokenKind::Keyword, Some("if"))?.loc.clone();
         let condition = self.parse_expression()?;
-        self.consume(tokenizer::TokenKind::Keyword, Some("then"))?;
+        self.consume(TokenKind::Keyword, Some("then"))?;
         let then_expression = self.parse_expression()?;
 
-        let else_expression: Option<ast::Expression> = if self.peek().kind
-            == tokenizer::TokenKind::Keyword
-            && self.peek().text.as_str() == "else"
-        {
-            self.consume(tokenizer::TokenKind::Keyword, Some("else"))?;
-            Some(self.parse_expression()?)
-        } else {
-            None
-        };
+        let else_expression: Option<ast::Expression> =
+            if self.peek().kind == TokenKind::Keyword && self.peek().text.as_str() == "else" {
+                self.consume(TokenKind::Keyword, Some("else"))?;
+                Some(self.parse_expression()?)
+            } else {
+                None
+            };
 
         Ok(ast::Expression {
             loc,
@@ -311,15 +292,10 @@ impl Parser {
     }
 
     fn parse_block(&mut self) -> Result<ast::Expression, String> {
-        let loc = self
-            .consume(tokenizer::TokenKind::Punctuation, Some("{"))?
-            .loc
-            .clone();
+        let loc = self.consume(TokenKind::Punctuation, Some("{"))?.loc.clone();
         let mut expressions = vec![];
         while self.peek().text.as_str() != "}" {
-            if self.peek().kind == tokenizer::TokenKind::Keyword
-                && self.peek().text.as_str() == "var"
-            {
+            if self.peek().kind == TokenKind::Keyword && self.peek().text.as_str() == "var" {
                 expressions.push(self.parse_var_declaration()?);
             } else {
                 expressions.push(self.parse_expression()?);
@@ -332,7 +308,7 @@ impl Parser {
                     break;
                 }
             } else {
-                self.consume(tokenizer::TokenKind::Punctuation, Some(";"))?;
+                self.consume(TokenKind::Punctuation, Some(";"))?;
                 if self.peek().text.as_str() == "}" {
                     let none_loc = self.peek().loc.clone();
                     expressions.push(ast::Expression {
@@ -344,7 +320,7 @@ impl Parser {
                 }
             }
         }
-        self.consume(tokenizer::TokenKind::Punctuation, Some("}"))?;
+        self.consume(TokenKind::Punctuation, Some("}"))?;
 
         Ok(ast::Expression {
             loc,
@@ -354,12 +330,9 @@ impl Parser {
     }
 
     fn parse_while(&mut self) -> Result<ast::Expression, String> {
-        let loc = self
-            .consume(tokenizer::TokenKind::Keyword, Some("while"))?
-            .loc
-            .clone();
+        let loc = self.consume(TokenKind::Keyword, Some("while"))?.loc.clone();
         let condition = self.parse_expression()?;
-        self.consume(tokenizer::TokenKind::Keyword, Some("do"))?;
+        self.consume(TokenKind::Keyword, Some("do"))?;
         let do_expression = self.parse_expression()?;
 
         Ok(ast::Expression {
@@ -373,10 +346,7 @@ impl Parser {
     }
 
     fn parse_function_call(&mut self, name: String) -> Result<ast::Expression, String> {
-        let loc = self
-            .consume(tokenizer::TokenKind::Punctuation, Some("("))?
-            .loc
-            .clone();
+        let loc = self.consume(TokenKind::Punctuation, Some("("))?.loc.clone();
 
         let mut arguments: Vec<ast::Expression> = vec![];
         if self.peek().text != ")" {
@@ -385,11 +355,11 @@ impl Parser {
                 if self.peek().text != "," {
                     break;
                 } else {
-                    self.consume(tokenizer::TokenKind::Punctuation, Some(","))?;
+                    self.consume(TokenKind::Punctuation, Some(","))?;
                 }
             }
         }
-        self.consume(tokenizer::TokenKind::Punctuation, Some(")"))?;
+        self.consume(TokenKind::Punctuation, Some(")"))?;
 
         Ok(ast::Expression {
             loc,
@@ -399,7 +369,7 @@ impl Parser {
     }
 
     fn parse_operation(&mut self) -> Result<ast::Operation, String> {
-        let token = self.consume(tokenizer::TokenKind::Operator, None)?;
+        let token = self.consume(TokenKind::Operator, None)?;
         match token.text.as_str() {
             "+" => return Ok(ast::Operation::Addition),
             "-" => return Ok(ast::Operation::Substraction),
@@ -434,7 +404,7 @@ impl Parser {
 
     fn parse_type(&mut self) -> Result<types::Type, String> {
         if self.peek().text == "(" {
-            self.consume(tokenizer::TokenKind::Punctuation, Some("("))?;
+            self.consume(TokenKind::Punctuation, Some("("))?;
             let mut param_types: Vec<types::Type> = vec![];
             loop {
                 let param_type = self.parse_type()?;
@@ -442,12 +412,12 @@ impl Parser {
                 if self.peek().text == ")" {
                     break;
                 } else {
-                    self.consume(tokenizer::TokenKind::Punctuation, Some(","))?;
+                    self.consume(TokenKind::Punctuation, Some(","))?;
                 }
             }
-            self.consume(tokenizer::TokenKind::Punctuation, Some(")"))?;
-            self.consume(tokenizer::TokenKind::Operator, Some("="))?;
-            self.consume(tokenizer::TokenKind::Operator, Some(">"))?;
+            self.consume(TokenKind::Punctuation, Some(")"))?;
+            self.consume(TokenKind::Operator, Some("="))?;
+            self.consume(TokenKind::Operator, Some(">"))?;
             let return_type = self.parse_type()?;
 
             Ok(types::Type::Function {
@@ -455,7 +425,7 @@ impl Parser {
                 return_type: Box::new(return_type),
             })
         } else {
-            let token = self.consume(tokenizer::TokenKind::Identifier, None)?;
+            let token = self.consume(TokenKind::Identifier, None)?;
             match token.text.as_str() {
                 "Int" => Ok(types::Type::Int),
                 "Bool" => Ok(types::Type::Bool),
@@ -487,7 +457,7 @@ impl Parser {
     }
 }
 
-pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<ast::Expression, String> {
+pub fn parse(tokens: Vec<Token>) -> Result<ast::Expression, String> {
     let binary_operators = vec![
         vec!["or"],
         vec!["and"],

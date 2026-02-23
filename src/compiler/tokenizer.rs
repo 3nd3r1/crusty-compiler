@@ -1,23 +1,8 @@
-use crate::compiler::common::Location;
+use crate::compiler::{
+    common::Location,
+    tokens::{Token, TokenKind},
+};
 use regex::Regex;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum TokenKind {
-    Keyword,
-    IntLiteral,
-    BoolLiteral,
-    Operator,
-    Identifier,
-    Punctuation,
-    End,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Token {
-    pub kind: TokenKind,
-    pub text: String,
-    pub loc: Location,
-}
 
 pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
     let keyword = Regex::new(r"^(if|else|while|then|do|not|var)\b").unwrap();
