@@ -12,6 +12,7 @@ struct IrGenerator {
     ins: Vec<ir::Instruction>,
     symtab: Rc<RefCell<IrSymTab>>,
     var_counter: u32,
+    label_counter: u32,
 }
 
 impl IrGenerator {
@@ -28,8 +29,27 @@ impl IrGenerator {
         }
     }
 
+    fn new_label(&mut self) -> ir::Label {
+        self.label_counter += 1;
+        if self.label_counter == 1 {
+            ir::Label {
+                name: "label".to_string(),
+            }
+        } else {
+            ir::Label {
+                name: format!("label{}", self.label_counter),
+            }
+        }
+    }
+
+    fn unit_var(&mut self) -> ir::IRVar {
+        ir::IRVar {
+            name: "unit".to_string(),
+        }
+    }
+
     fn generate(&mut self, node: &mut ast::Expression) -> Result<Vec<ir::Instruction>, String> {
-        self.visit(node);
+        self.visit(node)?;
         Ok(self.ins.clone())
     }
 
@@ -70,6 +90,65 @@ impl IrGenerator {
                 ));
                 Ok(var_result)
             }
+            ast::ExpressionKind::If {
+                condition,
+                then_expression,
+                else_expression,
+            } => match else_expression {
+                Some(else_expression) => {
+                    let l_then = self.new_label();
+                    let l_else = self.new_label();
+                    let l_end = self.new_label();
+                    let var_cond = self.visit(&mut *condition)?;
+
+                    self.ins.push(ir::Instruction::cond_jump(
+                        var_cond,
+                        l_then.clone(),
+                        l_else.clone(),
+                        node.loc.clone(),
+                    ));
+
+                    self.ins
+                        .push(ir::Instruction::label(l_then, node.loc.clone()));
+
+                    self.visit(&mut *then_expression)?;
+
+                    self.ins
+                        .push(ir::Instruction::jump(l_end.clone(), node.loc.clone()));
+
+                    self.ins
+                        .push(ir::Instruction::label(l_else, node.loc.clone()));
+
+                    self.visit(&mut *else_expression)?;
+
+                    self.ins
+                        .push(ir::Instruction::label(l_end, node.loc.clone()));
+
+                    Ok(self.unit_var())
+                }
+                _ => {
+                    let l_then = self.new_label();
+                    let l_end = self.new_label();
+                    let var_cond = self.visit(&mut *condition)?;
+
+                    self.ins.push(ir::Instruction::cond_jump(
+                        var_cond,
+                        l_then.clone(),
+                        l_end.clone(),
+                        node.loc.clone(),
+                    ));
+
+                    self.ins
+                        .push(ir::Instruction::label(l_then, node.loc.clone()));
+
+                    self.visit(&mut *then_expression)?;
+
+                    self.ins
+                        .push(ir::Instruction::label(l_end, node.loc.clone()));
+
+                    Ok(self.unit_var())
+                }
+            },
             _ => Err(format!(
                 "{:?}: unsupported expression: {:?}",
                 node.loc, node
@@ -94,6 +173,7 @@ pub fn generate_ir(
         ins: Vec::new(),
         symtab: Rc::new(RefCell::new(root_symtab)),
         var_counter: 0,
+        label_counter: 0,
     };
     ir_generator.generate(root_expr)
 }
