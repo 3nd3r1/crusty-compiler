@@ -94,11 +94,9 @@ impl Instruction {
             location,
         }
     }
-    pub fn label(name: String, location: Location) -> Self {
+    pub fn label(label: Label, location: Location) -> Self {
         Instruction {
-            kind: InstructionKind::Label {
-                label: Label { name },
-            },
+            kind: InstructionKind::Label { label },
             location,
         }
     }
