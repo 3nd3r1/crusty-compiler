@@ -19,7 +19,7 @@ impl IrGenerator {
     }
 
     fn generate(&mut self, node: &mut ast::Expression) -> Result<Vec<ir::Instruction>, String> {
-        let var_final_result = self.visit(node);
+        self.visit(node);
         Ok(self.ins.clone())
     }
 
@@ -85,4 +85,100 @@ pub fn generate_ir(
         symtab: Rc::new(RefCell::new(root_symtab)),
     };
     ir_generator.generate(root_expr)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::compiler::parser::tests::*;
+    use crate::compiler::tokenizer::tests::loc;
+
+    fn get_reserved_names() -> HashSet<String> {
+        use ast::Operation::*;
+        use ast::UnaryOperation::*;
+
+        let mut reserved_names = HashSet::new();
+
+        reserved_names.insert(format!("{}", Addition));
+        reserved_names.insert(format!("{}", Substraction));
+        reserved_names.insert(format!("{}", Multiplication));
+        reserved_names.insert(format!("{}", Division));
+        reserved_names.insert(format!("{}", Modulo));
+        reserved_names.insert(format!("{}", LessThan));
+        reserved_names.insert(format!("{}", GreaterThan));
+        reserved_names.insert(format!("{}", LessThanOrEqual));
+        reserved_names.insert(format!("{}", GreaterThanOrEqual));
+        reserved_names.insert(format!("{}", Or));
+        reserved_names.insert(format!("{}", And));
+        reserved_names.insert(format!("unary_{}", Neg));
+        reserved_names.insert(format!("unary_{}", Not));
+
+        reserved_names
+    }
+
+    fn gi(mut node: ast::Expression) -> Result<Vec<ir::Instruction>, String> {
+        generate_ir(get_reserved_names(), &mut node)
+    }
+
+    fn ilic(value: i32, dest: &str) -> ir::Instruction {
+        ir::Instruction::load_int_const(
+            value,
+            ir::IRVar {
+                name: dest.to_string(),
+            },
+            loc(),
+        )
+    }
+
+    fn imul(left: &str, right: &str, dest: &str) -> ir::Instruction {
+        icall(
+            &ast::Operation::Multiplication.to_string(),
+            vec![left, right],
+            dest,
+        )
+    }
+
+    fn iadd(left: &str, right: &str, dest: &str) -> ir::Instruction {
+        icall(
+            &ast::Operation::Addition.to_string(),
+            vec![left, right],
+            dest,
+        )
+    }
+
+    fn iprint(var: &str, dest: &str) -> ir::Instruction {
+        icall("print_int", vec![var], dest)
+    }
+
+    fn icall(fun: &str, args: Vec<&str>, dest: &str) -> ir::Instruction {
+        ir::Instruction::call(
+            ir::IRVar {
+                name: fun.to_string(),
+            },
+            args.iter()
+                .map(|a| ir::IRVar {
+                    name: a.to_string(),
+                })
+                .collect(),
+            ir::IRVar {
+                name: dest.to_string(),
+            },
+            loc(),
+        )
+    }
+
+    #[test]
+    fn test_ir_generator_math() {
+        assert_eq!(
+            gi(eadd(eint(1), emul(eint(2), eint(3)))).unwrap(),
+            vec![
+                ilic(1, "x"),
+                ilic(2, "x2"),
+                ilic(3, "x3"),
+                imul("x2", "x3", "x4"),
+                iadd("x", "x4", "x5"),
+                iprint("x5", "x6")
+            ]
+        );
+    }
 }
