@@ -4,3 +4,4 @@ pub mod tokenizer;
 pub mod common;
 pub mod interpreter;
 pub mod type_checker;
+pub mod ir;
