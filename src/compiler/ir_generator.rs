@@ -224,10 +224,24 @@ impl IrGenerator {
 
                 Ok(self.unit_var())
             }
-            _ => Err(format!(
-                "{:?}: unsupported expression: {:?}",
-                node.loc, node
-            )),
+            ast::ExpressionKind::FunctionCall { name, arguments } => {
+                let var_dest = self.new_var();
+                let var_fun = self.symtab.borrow().lookup(&name)?;
+
+                let mut var_args: Vec<ir::IRVar> = Vec::new();
+                for argument in arguments {
+                    var_args.push(self.visit(argument)?);
+                }
+
+                self.ins.push(ir::Instruction::call(
+                    var_fun,
+                    var_args,
+                    var_dest.clone(),
+                    node.loc.clone(),
+                ));
+
+                Ok(var_dest)
+            }
         }
     }
 }
