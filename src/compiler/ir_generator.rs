@@ -161,6 +161,19 @@ impl IrGenerator {
                     Ok(self.unit_var())
                 }
             },
+            ast::ExpressionKind::VarDeclaration { name, value, .. } => {
+                let var_value = self.visit(&mut *value)?;
+                let var_var = self.new_var();
+
+                self.symtab.borrow_mut().declare(name, var_var.clone());
+                self.ins.push(ir::Instruction::copy(
+                    var_value,
+                    var_var.clone(),
+                    node.loc.clone(),
+                ));
+
+                Ok(var_var)
+            }
             ast::ExpressionKind::Assignment { name, right } => {
                 let var_right = self.visit(&mut *right)?;
                 let var_var = self.symtab.borrow().lookup(&name)?;
