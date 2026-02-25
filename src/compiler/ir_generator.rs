@@ -90,6 +90,18 @@ impl IrGenerator {
                 ));
                 Ok(var_result)
             }
+            ast::ExpressionKind::UnaryOp { operand, op } => {
+                let var_op = self.symtab.borrow().lookup(&format!("unary_{}", op))?;
+                let var_operand = self.visit(operand)?;
+                let var_result = self.new_var();
+                self.ins.push(ir::Instruction::call(
+                    var_op,
+                    vec![var_operand],
+                    var_result.clone(),
+                    node.loc.clone(),
+                ));
+                Ok(var_result)
+            }
             ast::ExpressionKind::If {
                 condition,
                 then_expression,
