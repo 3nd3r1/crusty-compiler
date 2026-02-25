@@ -161,6 +161,17 @@ impl IrGenerator {
                     Ok(self.unit_var())
                 }
             },
+            ast::ExpressionKind::Assignment { name, right } => {
+                let var_right = self.visit(&mut *right)?;
+                let var_var = self.symtab.borrow().lookup(&name)?;
+                self.ins.push(ir::Instruction::copy(
+                    var_right,
+                    var_var.clone(),
+                    node.loc.clone(),
+                ));
+
+                Ok(var_var)
+            }
             _ => Err(format!(
                 "{:?}: unsupported expression: {:?}",
                 node.loc, node
