@@ -200,6 +200,30 @@ impl IrGenerator {
                     Ok(self.unit_var())
                 }
             }
+            ast::ExpressionKind::While {
+                condition,
+                do_expression,
+            } => {
+                let l_do = self.new_label();
+                let l_end = self.new_label();
+                let var_cond = self.visit(&mut *condition)?;
+
+                self.ins.push(ir::Instruction::cond_jump(
+                    var_cond,
+                    l_do.clone(),
+                    l_end.clone(),
+                    node.loc.clone(),
+                ));
+                self.ins
+                    .push(ir::Instruction::label(l_do, node.loc.clone()));
+
+                self.visit(&mut *do_expression)?;
+
+                self.ins
+                    .push(ir::Instruction::label(l_end, node.loc.clone()));
+
+                Ok(self.unit_var())
+            }
             _ => Err(format!(
                 "{:?}: unsupported expression: {:?}",
                 node.loc, node
