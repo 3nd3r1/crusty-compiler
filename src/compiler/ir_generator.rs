@@ -440,4 +440,13 @@ mod tests {
             vec![],
         );
     }
+
+    #[test]
+    fn test_ir_short_circuit() {
+        // Manual test
+        assert_ir_eq(
+            gi(eif(eand(ebool(false), ebool(true)), eint(1), None)).unwrap(),
+            vec![],
+        );
+    }
 }
