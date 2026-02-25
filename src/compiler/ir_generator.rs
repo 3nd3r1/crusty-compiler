@@ -172,6 +172,21 @@ impl IrGenerator {
 
                 Ok(var_var)
             }
+            ast::ExpressionKind::Block { expressions } => {
+                self.symtab = Rc::new(RefCell::new(IrSymTab {
+                    locals: HashMap::new(),
+                    parent: Some(Rc::clone(&self.symtab)),
+                }));
+
+                if let Some((last, expressions)) = expressions.split_last_mut() {
+                    for expression in expressions {
+                        self.visit(expression)?;
+                    }
+                    self.visit(last)
+                } else {
+                    Ok(self.unit_var())
+                }
+            }
             _ => Err(format!(
                 "{:?}: unsupported expression: {:?}",
                 node.loc, node
