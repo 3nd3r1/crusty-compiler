@@ -343,4 +343,17 @@ mod tests {
             vec![],
         );
     }
+
+    #[test]
+    fn test_ir_var() {
+        // Manual test
+        assert_ir_eq(
+            gi(eblock(vec![
+                evar("a", eint(1), None),
+                eassign("a", eint(2)),
+            ]))
+            .unwrap(),
+            vec![],
+        );
+    }
 }
