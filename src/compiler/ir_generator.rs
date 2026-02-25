@@ -55,9 +55,7 @@ impl IrGenerator {
 
     fn visit(&mut self, node: &mut ast::Expression) -> Result<ir::IRVar, String> {
         match &mut node.kind {
-            ast::ExpressionKind::NoneLiteral { .. } => Ok(ir::IRVar {
-                name: "unit".to_string(),
-            }),
+            ast::ExpressionKind::NoneLiteral { .. } => Ok(self.unit_var()),
             ast::ExpressionKind::IntLiteral { value } => {
                 let var = self.new_var();
                 self.ins.push(ir::Instruction::load_int_const(
