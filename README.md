@@ -37,7 +37,7 @@ See the full [language specification](https://hy-compilers.github.io/spring-2026
 - [x] Parser
 - [x] Interpreter
 - [x] Type checker
-- [ ] IR Generator
+- [x] IR Generator
 - [ ] Assembly Generator
 - [ ] Analysis & optimization
 - [ ] Function definitions
