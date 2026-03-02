@@ -42,10 +42,6 @@ impl Locals {
             Err(format!("undefined var: {}", var))
         }
     }
-
-    fn stack_used(&self) -> u32 {
-        self.stack_used
-    }
 }
 
 struct AssemblyGenerator {
@@ -83,11 +79,21 @@ impl AssemblyGenerator {
                 ir::InstructionKind::LoadIntConst { value, dest } => {
                     let dest_ref = self.locals.get_ref(dest)?;
                     if -(2 << 31) <= *value && *value <= 2 << 31 {
-                        self.emit(&format!("movq {}, {}", value, dest_ref));
+                        self.emit(&format!("movq ${}, {}", value, dest_ref));
                     } else {
-                        self.emit(&format!("movabsq {}, %rax", value));
+                        self.emit(&format!("movabsq ${}, %rax", value));
                         self.emit(&format!("movq %rax, {}", dest_ref));
                     }
+                }
+                ir::InstructionKind::LoadBoolConst { value, dest } => {
+                    let dest_ref = self.locals.get_ref(dest)?;
+                    self.emit(&format!("movq ${}, {}", *value as i32, dest_ref));
+                }
+                ir::InstructionKind::Copy { source, dest } => {
+                    let source_ref = self.locals.get_ref(source)?;
+                    let dest_ref = self.locals.get_ref(dest)?;
+                    self.emit(&format!("movq {}, %rax", source_ref));
+                    self.emit(&format!("movq %rax, {}", dest_ref));
                 }
                 ir::InstructionKind::Label { label } => {
                     self.emit("");
@@ -96,15 +102,29 @@ impl AssemblyGenerator {
                 ir::InstructionKind::Jump { label } => {
                     self.emit(&format!("jmp .L{}", label.name));
                 }
+                ir::InstructionKind::CondJump {
+                    cond,
+                    then_label,
+                    else_label,
+                } => {
+                    let cond_ref = self.locals.get_ref(cond)?;
+                    self.emit(&format!("cmpq $0, {}", cond_ref));
+                    self.emit(&format!("jne {}", then_label.name));
+                    self.emit(&format!("jmp {}", else_label.name));
+                }
                 _ => return Err(format!("unexpected instruction: {}", instr)),
             }
         }
+
+        self.emit("movq %rbp, %rsp");
+        self.emit("popq %rbp");
+        self.emit("ret");
 
         Ok(self.lines.join("\n"))
     }
 }
 
 pub fn generate_assembly(instructions: Vec<ir::Instruction>) -> Result<String, String> {
-    let assembly_generator = AssemblyGenerator::new(&instructions);
+    let mut assembly_generator = AssemblyGenerator::new(&instructions);
     assembly_generator.generate(instructions)
 }
