@@ -1,3 +1,4 @@
+pub mod assembly_generator;
 pub mod ast;
 pub mod common;
 pub mod interpreter;
