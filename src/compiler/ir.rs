@@ -100,6 +100,23 @@ impl Instruction {
             location,
         }
     }
+
+    pub fn get_vars(&self) -> Vec<IRVar> {
+        match &self.kind {
+            InstructionKind::LoadIntConst { dest, .. } => vec![dest.clone()],
+            InstructionKind::LoadBoolConst { dest, .. } => vec![dest.clone()],
+            InstructionKind::Copy { source, dest } => vec![source.clone(), dest.clone()],
+            InstructionKind::Call { fun, args, dest } => {
+                let mut ret = vec![fun.clone(), dest.clone()];
+                for arg in args {
+                    ret.push(arg.clone());
+                }
+                ret
+            }
+            InstructionKind::CondJump { cond, .. } => vec![cond.clone()],
+            _ => Vec::new(),
+        }
+    }
 }
 
 impl std::fmt::Display for IRVar {
