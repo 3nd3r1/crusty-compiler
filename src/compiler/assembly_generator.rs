@@ -8,7 +8,7 @@ struct Locals {
 }
 
 impl Locals {
-    pub fn new(variables: Vec<ir::IRVar>) -> Self {
+    fn new(variables: Vec<ir::IRVar>) -> Self {
         let mut var_to_location: HashMap<ir::IRVar, String> = HashMap::new();
         let mut stack_used: u32 = 0;
 
@@ -23,7 +23,7 @@ impl Locals {
         }
     }
 
-    pub fn from_instructions(instructions: &Vec<ir::Instruction>) -> Self {
+    fn from_instructions(instructions: &Vec<ir::Instruction>) -> Self {
         let mut variables: HashSet<ir::IRVar> = HashSet::new();
         for instr in instructions {
             for var in instr.get_vars() {
