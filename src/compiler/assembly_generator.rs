@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::compiler::ir;
 
@@ -8,7 +8,7 @@ struct Locals {
 }
 
 impl Locals {
-    fn new(variables: Vec<ir::IRVar>) -> Self {
+    pub fn new(variables: Vec<ir::IRVar>) -> Self {
         let mut var_to_location: HashMap<ir::IRVar, String> = HashMap::new();
         let mut stack_used: u32 = 0;
 
@@ -23,8 +23,20 @@ impl Locals {
         }
     }
 
-    fn get_ref(&self, var: ir::IRVar) -> Result<String, String> {
-        if let Some(location) = self.var_to_location.get(&var) {
+    pub fn from_instructions(instructions: &Vec<ir::Instruction>) -> Self {
+        let mut variables: HashSet<ir::IRVar> = HashSet::new();
+        for instr in instructions {
+            for var in instr.get_vars() {
+                if !variables.contains(&var) {
+                    variables.insert(var);
+                }
+            }
+        }
+        Self::new(variables.into_iter().collect())
+    }
+
+    fn get_ref(&self, var: &ir::IRVar) -> Result<String, String> {
+        if let Some(location) = self.var_to_location.get(var) {
             Ok(location.clone())
         } else {
             Err(format!("undefined var: {}", var))
@@ -34,4 +46,65 @@ impl Locals {
     fn stack_used(&self) -> u32 {
         self.stack_used
     }
+}
+
+struct AssemblyGenerator {
+    lines: Vec<String>,
+    locals: Locals,
+}
+
+impl AssemblyGenerator {
+    fn new(instructions: &Vec<ir::Instruction>) -> Self {
+        Self {
+            lines: Vec::new(),
+            locals: Locals::from_instructions(instructions),
+        }
+    }
+
+    fn emit(&mut self, line: &str) {
+        self.lines.push(line.to_string());
+    }
+
+    fn generate(&mut self, instructions: Vec<ir::Instruction>) -> Result<String, String> {
+        self.emit(".extern print_int");
+        self.emit(".extern print_bool");
+        self.emit(".extern read_int");
+        self.emit(".global main");
+        self.emit(".type main, @function");
+        self.emit(".section .text");
+        self.emit("main:");
+        self.emit("pushq %rbp");
+        self.emit("movq %rsp, %rbp");
+        self.emit(&format!("subq ${}, %rsp", self.locals.stack_used));
+
+        for instr in instructions {
+            self.emit(&format!("# {}", instr));
+            match &instr.kind {
+                ir::InstructionKind::LoadIntConst { value, dest } => {
+                    let dest_ref = self.locals.get_ref(dest)?;
+                    if -(2 << 31) <= *value && *value <= 2 << 31 {
+                        self.emit(&format!("movq {}, {}", value, dest_ref));
+                    } else {
+                        self.emit(&format!("movabsq {}, %rax", value));
+                        self.emit(&format!("movq %rax, {}", dest_ref));
+                    }
+                }
+                ir::InstructionKind::Label { label } => {
+                    self.emit("");
+                    self.emit(&format!(".L{}:", label.name));
+                }
+                ir::InstructionKind::Jump { label } => {
+                    self.emit(&format!("jmp .L{}", label.name));
+                }
+                _ => return Err(format!("unexpected instruction: {}", instr)),
+            }
+        }
+
+        Ok(self.lines.join("\n"))
+    }
+}
+
+pub fn generate_assembly(instructions: Vec<ir::Instruction>) -> Result<String, String> {
+    let assembly_generator = AssemblyGenerator::new(&instructions);
+    assembly_generator.generate(instructions)
 }
