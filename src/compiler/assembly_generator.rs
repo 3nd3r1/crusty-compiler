@@ -71,7 +71,7 @@ impl AssemblyGenerator {
         self.emit("main:");
         self.emit("pushq %rbp");
         self.emit("movq %rsp, %rbp");
-        self.emit(&format!("subq ${}, %rsp", self.locals.stack_used));
+        self.emit(&format!("subq ${}, %rsp", self.locals.stack_used*8));
 
         for instr in instructions {
             self.emit(&format!("# {}", instr));
