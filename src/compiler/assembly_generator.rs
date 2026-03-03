@@ -128,3 +128,39 @@ pub fn generate_assembly(instructions: Vec<ir::Instruction>) -> Result<String, S
     let mut assembly_generator = AssemblyGenerator::new(&instructions);
     assembly_generator.generate(instructions)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::compiler::ir_generator::tests::*;
+
+    fn ga(instructions: Vec<ir::Instruction>) -> Result<String, String> {
+        generate_assembly(instructions)
+    }
+
+    fn assert_assembly_eq(left: String, right: String) {
+        assert!(left == right, "expected:\n{}\ngot:\n{}", right, left);
+    }
+
+    #[test]
+    fn test_assembly_generator_basic() {
+        // Manual test
+        assert_assembly_eq(
+            ga(vec![
+                ilbc(true, "x"),
+                icopy("x", "x2"),
+                icondjump("x2", "then", "else"),
+                ilabel("then"),
+                ilic(1, "x4"),
+                icopy("x4", "x3"),
+                ijump("if_end"),
+                ilabel("else"),
+                ilic(2, "x5"),
+                icopy("x5", "x3"),
+                ilabel("if_end"),
+            ])
+            .unwrap(),
+            "".to_string()
+        )
+    }
+}
