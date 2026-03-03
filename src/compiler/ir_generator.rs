@@ -314,7 +314,7 @@ pub fn generate_ir(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::compiler::parser::tests::*;
     use crate::compiler::tokenizer::tests::loc;
@@ -362,7 +362,7 @@ mod tests {
         )
     }
 
-    fn ilic(value: i32, dest: &str) -> ir::Instruction {
+    pub fn ilic(value: i32, dest: &str) -> ir::Instruction {
         ir::Instruction::load_int_const(
             value,
             ir::IRVar {
@@ -372,7 +372,17 @@ mod tests {
         )
     }
 
-    fn imul(left: &str, right: &str, dest: &str) -> ir::Instruction {
+    pub fn ilbc(value: bool, dest: &str) -> ir::Instruction {
+        ir::Instruction::load_bool_const(
+            value,
+            ir::IRVar {
+                name: dest.to_string(),
+            },
+            loc(),
+        )
+    }
+
+    pub fn imul(left: &str, right: &str, dest: &str) -> ir::Instruction {
         icall(
             &ast::Operation::Multiplication.to_string(),
             vec![left, right],
@@ -380,7 +390,7 @@ mod tests {
         )
     }
 
-    fn iadd(left: &str, right: &str, dest: &str) -> ir::Instruction {
+    pub fn iadd(left: &str, right: &str, dest: &str) -> ir::Instruction {
         icall(
             &ast::Operation::Addition.to_string(),
             vec![left, right],
@@ -388,7 +398,7 @@ mod tests {
         )
     }
 
-    fn icall(fun: &str, args: Vec<&str>, dest: &str) -> ir::Instruction {
+    pub fn icall(fun: &str, args: Vec<&str>, dest: &str) -> ir::Instruction {
         ir::Instruction::call(
             ir::IRVar {
                 name: fun.to_string(),
@@ -400,6 +410,51 @@ mod tests {
                 .collect(),
             ir::IRVar {
                 name: dest.to_string(),
+            },
+            loc(),
+        )
+    }
+
+    pub fn icopy(source: &str, dest: &str) -> ir::Instruction {
+        ir::Instruction::copy(
+            ir::IRVar {
+                name: source.to_string(),
+            },
+            ir::IRVar {
+                name: dest.to_string(),
+            },
+            loc(),
+        )
+    }
+
+    pub fn icondjump(cond: &str, then_label: &str, else_label: &str) -> ir::Instruction {
+        ir::Instruction::cond_jump(
+            ir::IRVar {
+                name: cond.to_string(),
+            },
+            ir::Label {
+                name: then_label.to_string(),
+            },
+            ir::Label {
+                name: else_label.to_string(),
+            },
+            loc(),
+        )
+    }
+
+    pub fn ijump(label: &str) -> ir::Instruction {
+        ir::Instruction::jump(
+            ir::Label {
+                name: label.to_string(),
+            },
+            loc(),
+        )
+    }
+
+    pub fn ilabel(label: &str) -> ir::Instruction {
+        ir::Instruction::label(
+            ir::Label {
+                name: label.to_string(),
             },
             loc(),
         )
