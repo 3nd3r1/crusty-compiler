@@ -24,15 +24,17 @@ impl Locals {
     }
 
     fn from_instructions(instructions: &Vec<ir::Instruction>) -> Self {
-        let mut variables: HashSet<ir::IRVar> = HashSet::new();
+        let mut seen: HashSet<ir::IRVar> = HashSet::new();
+        let mut variables: Vec<ir::IRVar> = Vec::new();
         for instr in instructions {
             for var in instr.get_vars() {
-                if !variables.contains(&var) {
-                    variables.insert(var);
+                if !seen.contains(&var) {
+                    seen.insert(var.clone());
+                    variables.push(var);
                 }
             }
         }
-        Self::new(variables.into_iter().collect())
+        Self::new(variables)
     }
 
     fn get_ref(&self, var: &ir::IRVar) -> Result<String, String> {
