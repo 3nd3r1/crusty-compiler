@@ -135,6 +135,7 @@ impl AssemblyGenerator {
                         for (arg_ref, arg_register) in arg_refs.iter().zip(arg_registers.iter()) {
                             self.emit(&format!("movq {}, {}", arg_ref, arg_register));
                         }
+                        self.emit(&format!("callq {}", fun.name));
                     }
                 }
             }
