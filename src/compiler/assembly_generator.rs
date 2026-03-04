@@ -159,6 +159,93 @@ mod intrinsics {
 
     pub type IntrinsicFun = fn(Vec<String>, String, &mut Vec<String>);
 
+    fn _int_comparison(
+        arg_refs: Vec<String>,
+        result_register: String,
+        out: &mut Vec<String>,
+        setcc_insn: &str,
+    ) {
+        out.push(format!("xor %rax, %rax"));
+        out.push(format!("movq {}, %rdx", arg_refs[0]));
+        out.push(format!("cmpq {}, %rdx", arg_refs[1]));
+        out.push(format!("{} %al", setcc_insn));
+        if result_register != "%rax" {
+            out.push(format!("movq %rax, {}", result_register));
+        }
+    }
+
+    fn addition(arg_refs: Vec<String>, result_register: String, out: &mut Vec<String>) {
+        if result_register != arg_refs[0] {
+            out.push(format!("movq {}, {}", arg_refs[0], result_register));
+        }
+        out.push(format!("addq {}, {}", arg_refs[1], result_register));
+    }
+
+    fn substraction(arg_refs: Vec<String>, result_register: String, out: &mut Vec<String>) {
+        if result_register != arg_refs[0] {
+            out.push(format!("movq {}, {}", arg_refs[0], result_register));
+        }
+        out.push(format!("subq {}, {}", arg_refs[1], result_register));
+    }
+
+    fn multiplication(arg_refs: Vec<String>, result_register: String, out: &mut Vec<String>) {
+        if result_register != arg_refs[0] {
+            out.push(format!("movq {}, {}", arg_refs[0], result_register));
+        }
+        out.push(format!("imulq {}, {}", arg_refs[1], result_register));
+    }
+
+    fn division(arg_refs: Vec<String>, result_register: String, out: &mut Vec<String>) {
+        out.push(format!("movq {}, %rax", arg_refs[0]));
+        out.push(format!("cqto"));
+        out.push(format!("idivq {}", arg_refs[1]));
+        if result_register != "%rax" {
+            out.push(format!("movq %rax, {}", result_register));
+        }
+    }
+
+    fn modulo(arg_refs: Vec<String>, result_register: String, out: &mut Vec<String>) {
+        out.push(format!("movq {}, %rax", arg_refs[0]));
+        out.push(format!("cqto"));
+        out.push(format!("idivq {}", arg_refs[1]));
+        if result_register != "%rdx" {
+            out.push(format!("movq %rdx, {}", result_register));
+        }
+    }
+
+    fn less_than(arg_refs: Vec<String>, result_register: String, out: &mut Vec<String>) {
+        _int_comparison(arg_refs, result_register, out, "setl");
+    }
+
+    fn greater_than(arg_refs: Vec<String>, result_register: String, out: &mut Vec<String>) {
+        _int_comparison(arg_refs, result_register, out, "setg");
+    }
+
+    fn equal(arg_refs: Vec<String>, result_register: String, out: &mut Vec<String>) {
+        _int_comparison(arg_refs, result_register, out, "sete");
+    }
+
+    fn not_equal(arg_refs: Vec<String>, result_register: String, out: &mut Vec<String>) {
+        _int_comparison(arg_refs, result_register, out, "setne");
+    }
+
+    fn less_than_or_equal(arg_refs: Vec<String>, result_register: String, out: &mut Vec<String>) {
+        _int_comparison(arg_refs, result_register, out, "setle");
+    }
+
+    fn greater_than_or_equal(
+        arg_refs: Vec<String>,
+        result_register: String,
+        out: &mut Vec<String>,
+    ) {
+        _int_comparison(arg_refs, result_register, out, "setge");
+    }
+
+    fn unary_neg(arg_refs: Vec<String>, result_register: String, out: &mut Vec<String>) {
+        out.push(format!("movq {}, {}", arg_refs[0], result_register));
+        out.push(format!("negq {}", result_register));
+    }
+
     fn unary_not(arg_refs: Vec<String>, result_register: String, out: &mut Vec<String>) {
         out.push(format!("movq {}, {}", arg_refs[0], result_register));
         out.push(format!("xorq $1, {}", result_register));
@@ -170,30 +257,19 @@ mod intrinsics {
 
         let mut all: HashMap<String, IntrinsicFun> = HashMap::new();
 
-        // all.insert(format!("{}", Addition), BuiltInFunction(addition));
-        // all.insert(format!("{}", Substraction), BuiltInFunction(substraction));
-        // all.insert(
-        //     format!("{}", Multiplication),
-        //     BuiltInFunction(multiplication),
-        // );
-        // all.insert(format!("{}", Division), BuiltInFunction(division));
-        // all.insert(format!("{}", Modulo), BuiltInFunction(modulo));
-        // all.insert(format!("{}", LessThan), BuiltInFunction(less_than));
-        // all.insert(format!("{}", GreaterThan), BuiltInFunction(greater_than));
-        // all.insert(format!("{}", Equal), BuiltInFunction(equal));
-        // all.insert(format!("{}", NotEqual), BuiltInFunction(not_equal));
-        // all.insert(
-        //     format!("{}", LessThanOrEqual),
-        //     BuiltInFunction(less_than_or_equal),
-        // );
-        // all.insert(
-        //     format!("{}", GreaterThanOrEqual),
-        //     BuiltInFunction(greater_than_or_equal),
-        // );
-        // all.insert(format!("{}", Or), BuiltInFunction(or));
-        // all.insert(format!("{}", And), BuiltInFunction(and));
+        all.insert(format!("{}", Addition), addition);
+        all.insert(format!("{}", Substraction), substraction);
+        all.insert(format!("{}", Multiplication), multiplication);
+        all.insert(format!("{}", Division), division);
+        all.insert(format!("{}", Modulo), modulo);
+        all.insert(format!("{}", LessThan), less_than);
+        all.insert(format!("{}", GreaterThan), greater_than);
+        all.insert(format!("{}", Equal), equal);
+        all.insert(format!("{}", NotEqual), not_equal);
+        all.insert(format!("{}", LessThanOrEqual), less_than_or_equal);
+        all.insert(format!("{}", GreaterThanOrEqual), greater_than_or_equal);
 
-        // all.insert(format!("unary_{}", Neg), BuiltInFunction(unary_neg));
+        all.insert(format!("unary_{}", Neg), unary_neg);
         all.insert(format!("unary_{}", Not), unary_not);
 
         all
