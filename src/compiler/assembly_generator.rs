@@ -49,6 +49,7 @@ impl Locals {
 struct AssemblyGenerator {
     lines: Vec<String>,
     locals: Locals,
+    all_intrinsics: HashMap<String, intrinsics::IntrinsicFun>,
 }
 
 impl AssemblyGenerator {
@@ -56,6 +57,7 @@ impl AssemblyGenerator {
         Self {
             lines: Vec::new(),
             locals: Locals::from_instructions(instructions),
+            all_intrinsics: intrinsics::build_all_instrinsics(),
         }
     }
 
@@ -113,7 +115,28 @@ impl AssemblyGenerator {
                     self.emit(&format!("jne .L{}", then_label.name));
                     self.emit(&format!("jmp .L{}", else_label.name));
                 }
-                _ => return Err(format!("unexpected instruction: {}", instr)),
+                ir::InstructionKind::Call { fun, args, dest } => {
+                    let dest_ref = self.locals.get_ref(dest)?;
+                    let mut arg_refs = Vec::new();
+                    for arg in args {
+                        arg_refs.push(self.locals.get_ref(arg)?);
+                    }
+
+                    if let Some(intrinsic_fun) = self.all_intrinsics.get(&fun.name) {
+                        intrinsic_fun(arg_refs, dest_ref, &mut self.lines);
+                    } else {
+                        let arg_registers = vec!["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"];
+                        if arg_registers.len() < arg_refs.len() {
+                            return Err(format!(
+                                "more than {} args in Call is not supported",
+                                arg_registers.len()
+                            ));
+                        }
+                        for (arg_ref, arg_register) in arg_refs.iter().zip(arg_registers.iter()) {
+                            self.emit(&format!("movq {}, {}", arg_ref, arg_register));
+                        }
+                    }
+                }
             }
             self.emit("");
         }
@@ -129,6 +152,52 @@ impl AssemblyGenerator {
 pub fn generate_assembly(instructions: Vec<ir::Instruction>) -> Result<String, String> {
     let mut assembly_generator = AssemblyGenerator::new(&instructions);
     assembly_generator.generate(instructions)
+}
+
+mod intrinsics {
+    use std::collections::HashMap;
+
+    pub type IntrinsicFun = fn(Vec<String>, String, &mut Vec<String>);
+
+    fn unary_not(arg_refs: Vec<String>, result_register: String, out: &mut Vec<String>) {
+        out.push(format!("movq {}, {}", arg_refs[0], result_register));
+        out.push(format!("xorq $1, {}", result_register));
+    }
+
+    pub fn build_all_instrinsics() -> HashMap<String, IntrinsicFun> {
+        use crate::compiler::ast::Operation::*;
+        use crate::compiler::ast::UnaryOperation::*;
+
+        let mut all: HashMap<String, IntrinsicFun> = HashMap::new();
+
+        // all.insert(format!("{}", Addition), BuiltInFunction(addition));
+        // all.insert(format!("{}", Substraction), BuiltInFunction(substraction));
+        // all.insert(
+        //     format!("{}", Multiplication),
+        //     BuiltInFunction(multiplication),
+        // );
+        // all.insert(format!("{}", Division), BuiltInFunction(division));
+        // all.insert(format!("{}", Modulo), BuiltInFunction(modulo));
+        // all.insert(format!("{}", LessThan), BuiltInFunction(less_than));
+        // all.insert(format!("{}", GreaterThan), BuiltInFunction(greater_than));
+        // all.insert(format!("{}", Equal), BuiltInFunction(equal));
+        // all.insert(format!("{}", NotEqual), BuiltInFunction(not_equal));
+        // all.insert(
+        //     format!("{}", LessThanOrEqual),
+        //     BuiltInFunction(less_than_or_equal),
+        // );
+        // all.insert(
+        //     format!("{}", GreaterThanOrEqual),
+        //     BuiltInFunction(greater_than_or_equal),
+        // );
+        // all.insert(format!("{}", Or), BuiltInFunction(or));
+        // all.insert(format!("{}", And), BuiltInFunction(and));
+
+        // all.insert(format!("unary_{}", Neg), BuiltInFunction(unary_neg));
+        all.insert(format!("unary_{}", Not), unary_not);
+
+        all
+    }
 }
 
 #[cfg(test)]
