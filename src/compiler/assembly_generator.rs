@@ -98,7 +98,6 @@ impl AssemblyGenerator {
                     self.emit(&format!("movq %rax, {}", dest_ref));
                 }
                 ir::InstructionKind::Label { label } => {
-                    self.emit("");
                     self.emit(&format!(".L{}:", label.name));
                 }
                 ir::InstructionKind::Jump { label } => {
@@ -111,11 +110,12 @@ impl AssemblyGenerator {
                 } => {
                     let cond_ref = self.locals.get_ref(cond)?;
                     self.emit(&format!("cmpq $0, {}", cond_ref));
-                    self.emit(&format!("jne {}", then_label.name));
-                    self.emit(&format!("jmp {}", else_label.name));
+                    self.emit(&format!("jne .L{}", then_label.name));
+                    self.emit(&format!("jmp .L{}", else_label.name));
                 }
                 _ => return Err(format!("unexpected instruction: {}", instr)),
             }
+            self.emit("");
         }
 
         self.emit("movq %rbp, %rsp");
