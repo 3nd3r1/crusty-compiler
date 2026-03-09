@@ -290,6 +290,26 @@ mod tests {
         assert!(left == right, "expected:\n{}\ngot:\n{}", right, left);
     }
 
+    fn make_asm(stack_used: u32, body: &str) -> String {
+        format!(
+            ".extern print_int\n\
+             .extern print_bool\n\
+             .extern read_int\n\
+             .global main\n\
+             .type main, @function\n\
+             .section .text\n\
+             main:\n\
+             pushq %rbp\n\
+             movq %rsp, %rbp\n\
+             subq ${}, %rsp\n\
+             {}\n\
+             movq %rbp, %rsp\n\
+             popq %rbp\n\
+             ret",
+            stack_used, body
+        )
+    }
+
     #[test]
     fn test_assembly_generator_basic() {
         // Manual test
@@ -309,6 +329,22 @@ mod tests {
             ])
             .unwrap(),
             "".to_string(),
+        )
+    }
+
+    #[test]
+    fn test_assembly_generator_call() {
+        assert_assembly_eq(
+            ga(vec![ilic(42, "a"), icall("my_func", vec!["a"], "res")]).unwrap(),
+            make_asm(
+                24,
+                "# LoadIntCost(42, a)\n\
+                 movq $42, -8(%rbp)\n\
+                 \n\
+                 # Call(my_func, [IRVar { name: \"a\" }], res)\n\
+                 movq -8(%rbp), %rdi\n\
+                 callq my_func\n",
+            ),
         )
     }
 }
