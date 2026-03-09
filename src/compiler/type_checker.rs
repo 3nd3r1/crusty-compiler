@@ -4,7 +4,15 @@ use crate::compiler::{ast, common::SymTab, types::Type};
 
 type TypeSymTab = SymTab<Type>;
 
-pub fn typecheck(
+pub fn typecheck(node: &mut ast::Expression) -> Result<Type, String> {
+    let root_symtab = Rc::new(RefCell::new(TypeSymTab {
+        locals: builtin_types::build_builtin_types(),
+        parent: None,
+    }));
+    typecheck_node(node, &root_symtab)
+}
+
+fn typecheck_node(
     node: &mut ast::Expression,
     symtab: &Rc<RefCell<TypeSymTab>>,
 ) -> Result<Type, String> {
@@ -14,8 +22,8 @@ pub fn typecheck(
         ast::ExpressionKind::BoolLiteral { .. } => Ok(Type::Bool),
         ast::ExpressionKind::Identifier { value } => symtab.borrow().lookup(value),
         ast::ExpressionKind::BinaryOp { left, right, op } => {
-            let left_type = typecheck(&mut *left, symtab)?;
-            let right_type = typecheck(&mut *right, symtab)?;
+            let left_type = typecheck_node(&mut *left, symtab)?;
+            let right_type = typecheck_node(&mut *right, symtab)?;
 
             match &op {
                 ast::Operation::Equal | ast::Operation::NotEqual => {
@@ -58,7 +66,7 @@ pub fn typecheck(
             }
         }
         ast::ExpressionKind::UnaryOp { operand, op } => {
-            let operand_type = typecheck(&mut *operand, symtab)?;
+            let operand_type = typecheck_node(&mut *operand, symtab)?;
 
             let identifier = format!("unary_{}", op);
             let func = symtab.borrow().lookup(&identifier)?;
@@ -90,16 +98,16 @@ pub fn typecheck(
             then_expression,
             else_expression,
         } => {
-            let condition_type = typecheck(&mut *condition, symtab)?;
+            let condition_type = typecheck_node(&mut *condition, symtab)?;
             if condition_type != Type::Bool {
                 Err(format!(
                     "expected condition to be of type bool got {}",
                     condition_type
                 ))
             } else {
-                let then_type = typecheck(&mut *then_expression, symtab)?;
+                let then_type = typecheck_node(&mut *then_expression, symtab)?;
                 if let Some(else_expression) = else_expression {
-                    let else_type = typecheck(&mut *else_expression, symtab)?;
+                    let else_type = typecheck_node(&mut *else_expression, symtab)?;
 
                     if then_type != else_type {
                         return Err(format!(
@@ -116,7 +124,7 @@ pub fn typecheck(
             value,
             value_type,
         } => {
-            let actual_value_type = typecheck(&mut *value, symtab)?;
+            let actual_value_type = typecheck_node(&mut *value, symtab)?;
             if let Some(value_type) = value_type {
                 if actual_value_type != **value_type {
                     return Err(format!(
@@ -133,7 +141,7 @@ pub fn typecheck(
             Ok(Type::Unit)
         }
         ast::ExpressionKind::Assignment { name, right } => {
-            let value_type = typecheck(&mut *right, symtab)?;
+            let value_type = typecheck_node(&mut *right, symtab)?;
             symtab.borrow_mut().assign(name, value_type.clone())?;
             Ok(value_type)
         }
@@ -145,9 +153,9 @@ pub fn typecheck(
 
             if let Some((last, expressions)) = expressions.split_last_mut() {
                 for expression in expressions {
-                    typecheck(expression, &block_symtab)?;
+                    typecheck_node(expression, &block_symtab)?;
                 }
-                typecheck(last, &block_symtab)
+                typecheck_node(last, &block_symtab)
             } else {
                 Ok(Type::Unit)
             }
@@ -156,7 +164,7 @@ pub fn typecheck(
             condition,
             do_expression: _,
         } => {
-            let condition_type = typecheck(&mut *condition, symtab)?;
+            let condition_type = typecheck_node(&mut *condition, symtab)?;
             if condition_type != Type::Bool {
                 Err(format!(
                     "expected condition to be of type {} got {}",
@@ -184,7 +192,7 @@ pub fn typecheck(
                     ))
                 } else {
                     for (param_type, argument) in params.iter().zip(arguments.iter_mut()) {
-                        let argument_type = typecheck(argument, symtab)?;
+                        let argument_type = typecheck_node(argument, symtab)?;
                         if argument_type != *param_type {
                             return Err(format!(
                                 "Function {} expected argument to be of type {}, got {}",
@@ -262,15 +270,8 @@ mod tests {
     use super::*;
     use crate::compiler::parser::tests::*;
 
-    fn empty_symtab() -> TypeSymTab {
-        TypeSymTab {
-            locals: builtin_types::build_builtin_types(),
-            parent: None,
-        }
-    }
-
     fn tc(mut node: ast::Expression) -> Result<Type, String> {
-        typecheck(&mut node, &Rc::new(RefCell::new(empty_symtab())))
+        typecheck(&mut node)
     }
 
     #[test]
@@ -356,7 +357,7 @@ mod tests {
         let mut node = eadd(eint(2), eint(3));
         assert_eq!(node.return_type, None);
 
-        let result = typecheck(&mut node, &Rc::new(RefCell::new(empty_symtab()))).unwrap();
+        let result = typecheck(&mut node).unwrap();
 
         assert_eq!(result, Type::Int);
         assert_eq!(node.return_type, Some(Type::Int));
