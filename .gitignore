@@ -1,5 +1,6 @@
 target/
 .direnv/
+output/
 
 .test-gadget/*
 !.test-gadget/course.json
