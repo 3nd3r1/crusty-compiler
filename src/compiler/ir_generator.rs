@@ -318,6 +318,9 @@ pub fn generate_ir(root_expr: &mut ast::Expression) -> Result<Vec<ir::Instructio
         format!("unary_{}", Neg),
         format!("unary_{}", Not),
         "print_int".to_string(),
+        "print_bool".to_string(),
+        "read_int".to_string(),
+        "read_bool".to_string(),
     ];
 
     let mut root_symtab = IrSymTab {
