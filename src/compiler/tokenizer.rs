@@ -10,7 +10,7 @@ pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
     let bool_literal = Regex::new(r"^(true|false)\b").unwrap();
     let operator = Regex::new(r"^(or\b|and\b|==|!=|<=|>=|[-<>+*/%=])").unwrap();
     let identifier = Regex::new(r"^[a-zA-Z_][a-zA-Z0-9_]*").unwrap();
-    let punctuation = Regex::new(r"^[;,\(\){}]").unwrap();
+    let punctuation = Regex::new(r"^[:;,\(\){}]").unwrap();
 
     let comment = Regex::new(r"^(//|\#)[^\n]*").unwrap();
     let multi_line_comment = Regex::new(r"^/\*[\s\S]*\*/").unwrap();
@@ -58,7 +58,10 @@ pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
         }
 
         if !token_match_found {
-            return Err("No match found".to_string());
+            return Err(format!(
+                "Unexpected character: '{}'",
+                remaining_code.chars().next().unwrap()
+            ));
         }
     }
 
