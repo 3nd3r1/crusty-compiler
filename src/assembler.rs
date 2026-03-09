@@ -1,10 +1,7 @@
-use std::{fs, path};
+use std::{fs, path::Path};
 
-pub fn assemble_and_get_executable(code: &str, workdir: Option<&str>) -> Result<Vec<u8>, String> {
-    let workdir = match workdir {
-        Some(wd) => path::Path::new(wd),
-        None => path::Path::new("./output"),
-    };
+pub fn assemble_and_get_executable(code: &str, workdir: Option<&Path>) -> Result<Vec<u8>, String> {
+    let workdir = workdir.unwrap_or_else(|| Path::new("./output"));
 
     fs::create_dir_all(workdir).map_err(|e| format!("Failed to create workdir: {}", e))?;
 
