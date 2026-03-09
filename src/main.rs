@@ -36,7 +36,10 @@ fn main() {
             let source_code = input_file.contents().expect("Failed to read input");
             match call_compiler(&source_code) {
                 Ok(executable) => {
-                    fs::write(output, &executable).expect("Failed to write output file");
+                    use std::os::unix::fs::PermissionsExt;
+                    fs::write(&output, &executable).expect("Failed to write output file");
+                    fs::set_permissions(&output, fs::Permissions::from_mode(0o755))
+                        .expect("Failed to set permissions");
                 }
                 Err(e) => {
                     eprintln!("Compilation error: {}", e);
