@@ -83,7 +83,6 @@ impl IrGenerator {
             ast::ExpressionKind::Identifier { value } => self.symtab.borrow().lookup(&value),
             ast::ExpressionKind::BinaryOp { left, right, op } => {
                 let var_left = self.visit(left)?;
-                let var_result = self.new_var();
                 match &op {
                     ast::Operation::Or | ast::Operation::And => {
                         let l_right = self.new_label();
@@ -108,6 +107,7 @@ impl IrGenerator {
                         self.ins
                             .push(ir::Instruction::label(l_right, node.loc.clone()));
                         let var_right = self.visit(right)?;
+                        let var_result = self.new_var();
                         self.ins.push(ir::Instruction::copy(
                             var_right,
                             var_result.clone(),
@@ -132,6 +132,7 @@ impl IrGenerator {
                     _ => {
                         let var_fun = self.symtab.borrow().lookup(&op.to_string())?;
                         let var_right = self.visit(right)?;
+                        let var_result = self.new_var();
                         self.ins.push(ir::Instruction::call(
                             var_fun,
                             vec![var_left, var_right],
