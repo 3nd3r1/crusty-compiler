@@ -147,7 +147,7 @@ impl AssemblyGenerator {
         self.emit("popq %rbp");
         self.emit("ret");
 
-        Ok(self.lines.join("\n"))
+        Ok(self.lines.join("\n") + "\n")
     }
 }
 
