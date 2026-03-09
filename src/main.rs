@@ -1,9 +1,6 @@
 use clap::{Parser, Subcommand};
 use clap_stdin::FileOrStdin;
-use compilers_project::{
-    assembler::assemble_and_get_executable,
-    compiler::{assembly_generator, ir_generator, parser, tokenizer, type_checker},
-};
+use compilers_project::compile;
 use std::fs;
 
 #[derive(Parser)]
@@ -140,11 +137,5 @@ fn process_request(input: &str) -> String {
 }
 
 fn call_compiler(source_code: &str) -> Result<Vec<u8>, String> {
-    let tokens = tokenizer::tokenize(source_code)?;
-    let mut expression = parser::parse(tokens)?;
-    type_checker::typecheck(&mut expression)?;
-    let instructions = ir_generator::generate_ir(&mut expression)?;
-    let assembly_code = assembly_generator::generate_assembly(instructions)?;
-
-    assemble_and_get_executable(&assembly_code, None)
+    compile(source_code)
 }
