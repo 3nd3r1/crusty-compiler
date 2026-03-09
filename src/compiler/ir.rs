@@ -144,7 +144,12 @@ impl std::fmt::Display for Instruction {
                 write!(f, "Copy({}, {})", source, dest)
             }
             InstructionKind::Call { fun, args, dest } => {
-                write!(f, "Call({}, {:?}, {})", fun, args, dest)
+                let args_str = args
+                    .iter()
+                    .map(|a| a.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "Call({}, [{}], {})", fun, args_str, dest)
             }
             InstructionKind::Jump { label } => {
                 write!(f, "Jump({})", label)
