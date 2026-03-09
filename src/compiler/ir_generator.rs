@@ -471,6 +471,7 @@ pub mod tests {
                 ilic(3, "x3"),
                 imul("x2", "x3", "x4"),
                 iadd("x", "x4", "x5"),
+                icall("print_int", vec!["x5"], "x6"),
             ],
         );
     }
