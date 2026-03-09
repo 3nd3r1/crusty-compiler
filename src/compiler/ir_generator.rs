@@ -45,7 +45,17 @@ impl IrGenerator {
     }
 
     fn generate(&mut self, node: &mut ast::Expression) -> Result<Vec<ir::Instruction>, String> {
-        self.visit(node)?;
+        let result = self.visit(node)?;
+        if result != self.unit_var() {
+            let var_fun = self.symtab.borrow().lookup("print_int")?;
+            let var_result = self.new_var();
+            self.ins.push(ir::Instruction::call(
+                var_fun,
+                vec![result],
+                var_result,
+                node.loc.clone(),
+            ));
+        }
         Ok(self.ins.clone())
     }
 
@@ -306,6 +316,7 @@ pub fn generate_ir(root_expr: &mut ast::Expression) -> Result<Vec<ir::Instructio
         format!("{}", And),
         format!("unary_{}", Neg),
         format!("unary_{}", Not),
+        "print_int".to_string(),
     ];
 
     let mut root_symtab = IrSymTab {
