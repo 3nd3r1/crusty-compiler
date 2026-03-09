@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::compiler::{ast, common::SymTab, ir};
+use crate::compiler::{ast, common::SymTab, ir, types::Type};
 
 type IrSymTab = SymTab<ir::IRVar>;
 
@@ -46,8 +46,15 @@ impl IrGenerator {
 
     fn generate(&mut self, node: &mut ast::Expression) -> Result<Vec<ir::Instruction>, String> {
         let result = self.visit(node)?;
-        if result != self.unit_var() {
-            let var_fun = self.symtab.borrow().lookup("print_int")?;
+
+        let print_fn = match &node.return_type {
+            Some(Type::Int) => Some("print_int"),
+            Some(Type::Bool) => Some("print_bool"),
+            _ => None,
+        };
+
+        if let Some(print_fn) = print_fn {
+            let var_fun = self.symtab.borrow().lookup(print_fn)?;
             let var_result = self.new_var();
             self.ins.push(ir::Instruction::call(
                 var_fun,
@@ -56,6 +63,7 @@ impl IrGenerator {
                 node.loc.clone(),
             ));
         }
+
         Ok(self.ins.clone())
     }
 
