@@ -309,6 +309,8 @@ pub fn generate_ir(root_expr: &mut ast::Expression) -> Result<Vec<ir::Instructio
         format!("{}", Multiplication),
         format!("{}", Division),
         format!("{}", Modulo),
+        format!("{}", Equal),
+        format!("{}", NotEqual),
         format!("{}", LessThan),
         format!("{}", GreaterThan),
         format!("{}", LessThanOrEqual),
