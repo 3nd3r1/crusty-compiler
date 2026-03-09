@@ -246,6 +246,23 @@ pub mod builtin_types {
             return_type: Box::new(Type::Bool),
         };
 
+        let int_to_unit = Type::Function {
+            params: vec![Type::Int],
+            return_type: Box::new(Type::Unit),
+        };
+        let bool_to_unit = Type::Function {
+            params: vec![Type::Bool],
+            return_type: Box::new(Type::Unit),
+        };
+        let none_to_int = Type::Function {
+            params: vec![],
+            return_type: Box::new(Type::Int),
+        };
+        let none_to_bool = Type::Function {
+            params: vec![],
+            return_type: Box::new(Type::Bool),
+        };
+
         types.insert(format!("{}", Addition), int_int_to_int.clone());
         types.insert(format!("{}", Substraction), int_int_to_int.clone());
         types.insert(format!("{}", Multiplication), int_int_to_int.clone());
@@ -260,6 +277,11 @@ pub mod builtin_types {
 
         types.insert(format!("unary_{}", Neg), int_to_int.clone());
         types.insert(format!("unary_{}", Not), bool_to_bool.clone());
+
+        types.insert("print_int".to_string(), int_to_unit.clone());
+        types.insert("print_bool".to_string(), bool_to_unit.clone());
+        types.insert("read_int".to_string(), none_to_int.clone());
+        types.insert("read_bool".to_string(), none_to_bool.clone());
 
         types
     }
