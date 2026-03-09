@@ -123,7 +123,8 @@ impl AssemblyGenerator {
                     }
 
                     if let Some(intrinsic_fun) = self.all_intrinsics.get(&fun.name) {
-                        intrinsic_fun(arg_refs, dest_ref, &mut self.lines);
+                        intrinsic_fun(arg_refs, "%rax".to_string(), &mut self.lines);
+                        self.emit(&format!("movq %rax, {}", dest_ref));
                     } else {
                         let arg_registers = vec!["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"];
                         if arg_registers.len() < arg_refs.len() {
