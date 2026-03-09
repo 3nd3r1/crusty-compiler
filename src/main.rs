@@ -31,7 +31,7 @@ fn main() {
     match args.command {
         Commands::Compile { input_file, output } => {
             let source_code = input_file.contents().expect("Failed to read input");
-            match call_compiler(&source_code) {
+            match compile(&source_code, None) {
                 Ok(executable) => {
                     use std::os::unix::fs::PermissionsExt;
                     fs::write(&output, &executable).expect("Failed to write output file");
@@ -59,7 +59,9 @@ fn run_server(host: &str, port: u16) {
         match stream {
             Ok(stream) => {
                 std::thread::spawn(|| {
-                    handle(stream);
+                    if let Err(e) = handle(stream) {
+                        eprintln!("Error handling request: {}", e);
+                    }
                 });
             }
             Err(e) => {
@@ -69,28 +71,19 @@ fn run_server(host: &str, port: u16) {
     }
 }
 
-fn handle(mut stream: std::net::TcpStream) {
+fn handle(mut stream: std::net::TcpStream) -> Result<(), String> {
     use std::io::{Read, Write};
 
     let mut buffer = Vec::new();
-    if let Err(e) = stream.read_to_end(&mut buffer) {
-        eprintln!("Failed to read: {}", e);
-        return;
-    }
+    stream.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
 
-    let input = match String::from_utf8(buffer) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Invalid UTF-8: {}", e);
-            return;
-        }
-    };
+    let input = String::from_utf8(buffer).map_err(|e| e.to_string())?;
 
-    let result_str = process_request(&input);
+    let result_str = process_request(&input)?;
 
-    if let Err(e) = stream.write_all(result_str.as_bytes()) {
-        eprintln!("Failed to write: {}", e);
-    }
+    stream
+        .write_all(result_str.as_bytes())
+        .map_err(|e| e.to_string())
 }
 
 use serde::{Deserialize, Serialize};
@@ -110,20 +103,14 @@ enum RequestResult {
     Error { error: String },
 }
 
-fn process_request(input: &str) -> String {
-    let request: Request = match serde_json::from_str(&input) {
-        Ok(r) => r,
-        Err(e) => {
-            return serde_json::to_string(&RequestResult::Error {
-                error: e.to_string(),
-            })
-            .unwrap();
-        }
-    };
+fn process_request(input: &str) -> Result<String, String> {
+    let request: Request = serde_json::from_str(&input).map_err(|e| e.to_string())?;
+
+    let tmp_dir = tempfile::TempDir::new().map_err(|e| e.to_string())?;
 
     let result = match request {
         Request::Ping => RequestResult::Empty {},
-        Request::Compile { code } => match call_compiler(&code) {
+        Request::Compile { code } => match compile(&code, Some(tmp_dir.path())) {
             Ok(executable) => {
                 use base64::{Engine as _, engine::general_purpose::STANDARD};
                 let encoded = STANDARD.encode(&executable);
@@ -133,9 +120,5 @@ fn process_request(input: &str) -> String {
         },
     };
 
-    serde_json::to_string(&result).unwrap()
-}
-
-fn call_compiler(source_code: &str) -> Result<Vec<u8>, String> {
-    compile(source_code, None)
+    serde_json::to_string(&result).map_err(|e| e.to_string())
 }
