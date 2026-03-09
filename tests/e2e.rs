@@ -70,11 +70,12 @@ fn parse_test_case(block: &str) -> TestCase {
 }
 
 fn run_test_case(case: TestCase) -> Result<(), Failed> {
-    let executable = compilers_project::compile(&case.source)
-        .map_err(|e| format!("Compilation failed: {}", e))?;
-
     let tmp_dir = tempfile::TempDir::new().map_err(|e| e.to_string())?;
     let path = tmp_dir.path().join("a.out");
+
+    let executable = compilers_project::compile(&case.source, Some(tmp_dir.path()))
+        .map_err(|e| format!("Compilation failed: {}", e))?;
+
     fs::write(&path, &executable).map_err(|e| e.to_string())?;
     fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).map_err(|e| e.to_string())?;
 
