@@ -1,8 +1,4 @@
-use std::{
-    cell::RefCell,
-    collections::{HashMap, HashSet},
-    rc::Rc,
-};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::compiler::{ast, common::SymTab, ir};
 
@@ -292,10 +288,26 @@ impl IrGenerator {
     }
 }
 
-pub fn generate_ir(
-    reserved_names: HashSet<String>,
-    root_expr: &mut ast::Expression,
-) -> Result<Vec<ir::Instruction>, String> {
+pub fn generate_ir(root_expr: &mut ast::Expression) -> Result<Vec<ir::Instruction>, String> {
+    use ast::Operation::*;
+    use ast::UnaryOperation::*;
+
+    let reserved_names = [
+        format!("{}", Addition),
+        format!("{}", Substraction),
+        format!("{}", Multiplication),
+        format!("{}", Division),
+        format!("{}", Modulo),
+        format!("{}", LessThan),
+        format!("{}", GreaterThan),
+        format!("{}", LessThanOrEqual),
+        format!("{}", GreaterThanOrEqual),
+        format!("{}", Or),
+        format!("{}", And),
+        format!("unary_{}", Neg),
+        format!("unary_{}", Not),
+    ];
+
     let mut root_symtab = IrSymTab {
         locals: HashMap::new(),
         parent: None,
@@ -319,31 +331,8 @@ pub mod tests {
     use crate::compiler::parser::tests::*;
     use crate::compiler::tokenizer::tests::loc;
 
-    fn get_reserved_names() -> HashSet<String> {
-        use ast::Operation::*;
-        use ast::UnaryOperation::*;
-
-        let mut reserved_names = HashSet::new();
-
-        reserved_names.insert(format!("{}", Addition));
-        reserved_names.insert(format!("{}", Substraction));
-        reserved_names.insert(format!("{}", Multiplication));
-        reserved_names.insert(format!("{}", Division));
-        reserved_names.insert(format!("{}", Modulo));
-        reserved_names.insert(format!("{}", LessThan));
-        reserved_names.insert(format!("{}", GreaterThan));
-        reserved_names.insert(format!("{}", LessThanOrEqual));
-        reserved_names.insert(format!("{}", GreaterThanOrEqual));
-        reserved_names.insert(format!("{}", Or));
-        reserved_names.insert(format!("{}", And));
-        reserved_names.insert(format!("unary_{}", Neg));
-        reserved_names.insert(format!("unary_{}", Not));
-
-        reserved_names
-    }
-
     fn gi(mut node: ast::Expression) -> Result<Vec<ir::Instruction>, String> {
-        generate_ir(get_reserved_names(), &mut node)
+        generate_ir(&mut node)
     }
 
     fn assert_ir_eq(left: Vec<ir::Instruction>, right: Vec<ir::Instruction>) {
