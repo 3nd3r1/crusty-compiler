@@ -257,8 +257,13 @@ impl IrGenerator {
                 condition,
                 do_expression,
             } => {
+                let l_start = self.new_label();
                 let l_do = self.new_label();
                 let l_end = self.new_label();
+
+                self.ins
+                    .push(ir::Instruction::label(l_start.clone(), node.loc.clone()));
+
                 let var_cond = self.visit(&mut *condition)?;
 
                 self.ins.push(ir::Instruction::cond_jump(
@@ -271,6 +276,9 @@ impl IrGenerator {
                     .push(ir::Instruction::label(l_do, node.loc.clone()));
 
                 self.visit(&mut *do_expression)?;
+
+                self.ins
+                    .push(ir::Instruction::jump(l_start.clone(), node.loc.clone()));
 
                 self.ins
                     .push(ir::Instruction::label(l_end, node.loc.clone()));
