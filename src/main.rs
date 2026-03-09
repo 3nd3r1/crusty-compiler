@@ -137,5 +137,5 @@ fn process_request(input: &str) -> String {
 }
 
 fn call_compiler(source_code: &str) -> Result<Vec<u8>, String> {
-    compile(source_code)
+    compile(source_code, None)
 }
