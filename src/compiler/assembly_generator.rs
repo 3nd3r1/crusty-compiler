@@ -82,7 +82,7 @@ impl AssemblyGenerator {
             match &instr.kind {
                 ir::InstructionKind::LoadIntConst { value, dest } => {
                     let dest_ref = self.locals.get_ref(dest)?;
-                    if i32::MIN <= *value && *value <= i32::MAX {
+                    if i32::MIN as i64 <= *value && *value <= i32::MAX as i64 {
                         self.emit(&format!("movq ${}, {}", value, dest_ref));
                     } else {
                         self.emit(&format!("movabsq ${}, %rax", value));

@@ -220,7 +220,7 @@ impl Parser {
             kind: ast::ExpressionKind::IntLiteral {
                 value: token
                     .text
-                    .parse::<i32>()
+                    .parse()
                     .map_err(|_| format!("{:?}: invalid number", token.loc))?,
             },
             return_type: None,
@@ -484,7 +484,7 @@ pub mod tests {
     use super::*;
     use crate::compiler::tokenizer::tests::*;
 
-    pub fn eint(value: i32) -> ast::Expression {
+    pub fn eint(value: i64) -> ast::Expression {
         ast::Expression {
             loc: loc(),
             kind: ast::ExpressionKind::IntLiteral { value },

@@ -19,7 +19,7 @@ pub struct Instruction {
 #[derive(Debug, Clone, PartialEq)]
 pub enum InstructionKind {
     LoadIntConst {
-        value: i32,
+        value: i64,
         dest: IRVar,
     },
     LoadBoolConst {
@@ -49,7 +49,7 @@ pub enum InstructionKind {
 }
 
 impl Instruction {
-    pub fn load_int_const(value: i32, dest: IRVar, location: Location) -> Self {
+    pub fn load_int_const(value: i64, dest: IRVar, location: Location) -> Self {
         Instruction {
             kind: InstructionKind::LoadIntConst { value, dest },
             location,
