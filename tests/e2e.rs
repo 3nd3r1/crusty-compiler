@@ -73,8 +73,8 @@ fn run_test_case(case: TestCase) -> Result<(), Failed> {
     let executable = compilers_project::compile(&case.source)
         .map_err(|e| format!("Compilation failed: {}", e))?;
 
-    let tmp = tempfile::NamedTempFile::new().map_err(|e| e.to_string())?;
-    let path = tmp.path().to_path_buf();
+    let tmp_dir = tempfile::TempDir::new().map_err(|e| e.to_string())?;
+    let path = tmp_dir.path().join("a.out");
     fs::write(&path, &executable).map_err(|e| e.to_string())?;
     fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).map_err(|e| e.to_string())?;
 
