@@ -110,13 +110,16 @@ pub enum ExpressionKind {
         value: Box<Expression>,
         value_type: Option<Box<Type>>,
     },
-    FunctionDeclaration {
-        name: String,
-        body: Box<Expression>,
-        return_type: Option<Type>,
-    },
-    Module {
-        name: String,
-        body: Box<Expression>,
-    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Module {
+    pub functions: Vec<FunctionDeclaration>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionDeclaration {
+    pub name: String,
+    pub body: Box<Expression>,
+    pub return_type: Option<Type>,
 }
