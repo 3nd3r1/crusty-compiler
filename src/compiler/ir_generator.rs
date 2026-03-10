@@ -176,12 +176,13 @@ impl IrGenerator {
                 condition,
                 then_expression,
                 else_expression,
-            } => match else_expression {
-                Some(else_expression) => {
+            } => {
+                if let Some(else_expression) = else_expression {
                     let l_then = self.new_label();
                     let l_else = self.new_label();
                     let l_end = self.new_label();
                     let var_cond = self.visit(&mut *condition)?;
+                    let var_result = self.new_var();
 
                     self.ins.push(ir::Instruction::cond_jump(
                         var_cond,
@@ -193,7 +194,12 @@ impl IrGenerator {
                     self.ins
                         .push(ir::Instruction::label(l_then, node.loc.clone()));
 
-                    self.visit(&mut *then_expression)?;
+                    let var_then_result = self.visit(&mut *then_expression)?;
+                    self.ins.push(ir::Instruction::copy(
+                        var_then_result,
+                        var_result.clone(),
+                        node.loc.clone(),
+                    ));
 
                     self.ins
                         .push(ir::Instruction::jump(l_end.clone(), node.loc.clone()));
@@ -201,14 +207,18 @@ impl IrGenerator {
                     self.ins
                         .push(ir::Instruction::label(l_else, node.loc.clone()));
 
-                    self.visit(&mut *else_expression)?;
+                    let var_else_result = self.visit(&mut *else_expression)?;
+                    self.ins.push(ir::Instruction::copy(
+                        var_else_result,
+                        var_result.clone(),
+                        node.loc.clone(),
+                    ));
 
                     self.ins
                         .push(ir::Instruction::label(l_end, node.loc.clone()));
 
-                    Ok(self.unit_var())
-                }
-                _ => {
+                    Ok(var_result)
+                } else {
                     let l_then = self.new_label();
                     let l_end = self.new_label();
                     let var_cond = self.visit(&mut *condition)?;
@@ -230,7 +240,7 @@ impl IrGenerator {
 
                     Ok(self.unit_var())
                 }
-            },
+            }
             ast::ExpressionKind::VarDeclaration { name, value, .. } => {
                 let var_value = self.visit(&mut *value)?;
                 let var_var = self.new_var();
