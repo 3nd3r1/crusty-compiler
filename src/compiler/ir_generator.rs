@@ -12,6 +12,15 @@ struct IrGenerator {
 }
 
 impl IrGenerator {
+    fn new(root_symtab: IrSymTab) -> Self {
+        IrGenerator {
+            ins: Vec::new(),
+            symtab: Rc::new(RefCell::new(root_symtab)),
+            var_counter: 0,
+            label_counter: 0,
+        }
+    }
+
     fn new_var(&mut self) -> ir::IRVar {
         self.var_counter += 1;
         if self.var_counter == 1 {
@@ -349,12 +358,7 @@ pub fn generate_ir(root_expr: &mut ast::Expression) -> Result<Vec<ir::Instructio
         root_symtab.declare(&name, ir::IRVar { name: name.clone() });
     }
 
-    let mut ir_generator = IrGenerator {
-        ins: Vec::new(),
-        symtab: Rc::new(RefCell::new(root_symtab)),
-        var_counter: 0,
-        label_counter: 0,
-    };
+    let mut ir_generator = IrGenerator::new(root_symtab);
     ir_generator.generate(root_expr)
 }
 
