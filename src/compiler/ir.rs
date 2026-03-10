@@ -135,10 +135,10 @@ impl std::fmt::Display for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match &self.kind {
             InstructionKind::LoadIntConst { value, dest } => {
-                write!(f, "LoadIntCost({}, {})", value, dest)
+                write!(f, "LoadIntConst({}, {})", value, dest)
             }
             InstructionKind::LoadBoolConst { value, dest } => {
-                write!(f, "LoadBoolCost({}, {})", value, dest)
+                write!(f, "LoadBoolConst({}, {})", value, dest)
             }
             InstructionKind::Copy { source, dest } => {
                 write!(f, "Copy({}, {})", source, dest)
