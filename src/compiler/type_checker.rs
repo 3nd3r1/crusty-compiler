@@ -4,12 +4,23 @@ use crate::compiler::{ast, common::SymTab, types::Type};
 
 type TypeSymTab = SymTab<Type>;
 
-pub fn typecheck(node: &mut ast::Expression) -> Result<Type, String> {
-    let root_symtab = Rc::new(RefCell::new(TypeSymTab {
-        locals: builtin_types::build_builtin_types(),
-        parent: None,
-    }));
-    typecheck_node(node, &root_symtab)
+pub fn typecheck(module: &mut ast::Module) -> Result<Type, String> {
+    if let Some((main, functions)) = module.functions.split_last_mut() {
+        let root_symtab = Rc::new(RefCell::new(TypeSymTab {
+            locals: builtin_types::build_builtin_types(),
+            parent: None,
+        }));
+        for function in functions {
+            let return_type = typecheck_node(&mut *function.body, &root_symtab)?;
+            root_symtab
+                .borrow_mut()
+                .declare(&function.name, return_type.clone());
+            function.return_type = Some(return_type);
+        }
+        typecheck_node(&mut *main.body, &root_symtab)
+    } else {
+        Err("module must contain at least a main function".to_string())
+    }
 }
 
 fn typecheck_node(
@@ -213,10 +224,6 @@ fn typecheck_node(
                 ))
             }
         }
-        ast::ExpressionKind::FunctionDeclaration { .. } => {
-            Err(format!("{}: FunctionDeclaration not implemented", node.loc))
-        }
-        ast::ExpressionKind::Module { body, .. } => typecheck_node(&mut *body, symtab),
     }?;
 
     node.return_type = Some(return_type.clone());
@@ -300,8 +307,15 @@ mod tests {
     use super::*;
     use crate::compiler::parser::tests::*;
 
-    fn tc(mut node: ast::Expression) -> Result<Type, String> {
-        typecheck(&mut node)
+    fn tc(node: ast::Expression) -> Result<Type, String> {
+        let mut module = ast::Module {
+            functions: vec![ast::FunctionDeclaration {
+                name: "main".to_string(),
+                return_type: None,
+                body: Box::new(node),
+            }],
+        };
+        typecheck(&mut module)
     }
 
     #[test]
@@ -384,15 +398,18 @@ mod tests {
 
     #[test]
     fn test_typechecker_expression_types() {
-        let mut node = eadd(eint(2), eint(3));
-        assert_eq!(node.return_type, None);
+        let mut module = ast::Module {
+            functions: vec![ast::FunctionDeclaration {
+                name: "main".to_string(),
+                return_type: None,
+                body: Box::new(eadd(eint(2), eint(3))),
+            }],
+        };
 
-        let result = typecheck(&mut node).unwrap();
-
+        let result = typecheck(&mut module).unwrap();
         assert_eq!(result, Type::Int);
-        assert_eq!(node.return_type, Some(Type::Int));
 
-        if let ast::ExpressionKind::BinaryOp { left, right, .. } = &node.kind {
+        if let ast::ExpressionKind::BinaryOp { left, right, .. } = &module.functions[0].body.kind {
             assert_eq!(left.return_type, Some(Type::Int));
             assert_eq!(right.return_type, Some(Type::Int));
         }
