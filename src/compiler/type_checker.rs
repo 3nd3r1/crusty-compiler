@@ -389,4 +389,9 @@ mod tests {
             assert_eq!(right.return_type, Some(Type::Int));
         }
     }
+
+    #[test]
+    fn test_typechecker_block() {
+        assert_eq!(tc(eblock(vec![eint(123), enone()])).unwrap(), Type::Unit);
+    }
 }
