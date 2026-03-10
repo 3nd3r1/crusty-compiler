@@ -213,6 +213,10 @@ fn typecheck_node(
                 ))
             }
         }
+        ast::ExpressionKind::FunctionDeclaration { .. } => {
+            Err(format!("{}: FunctionDeclaration not implemented", node.loc))
+        }
+        ast::ExpressionKind::Module { body, .. } => typecheck_node(&mut *body, symtab),
     }?;
 
     node.return_type = Some(return_type.clone());
