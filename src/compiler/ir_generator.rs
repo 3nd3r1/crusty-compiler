@@ -424,6 +424,10 @@ pub mod tests {
         )
     }
 
+    pub fn iprint_int(var: &str, dest: &str) -> ir::Instruction {
+        icall("print_int", vec![var], dest)
+    }
+
     pub fn icall(fun: &str, args: Vec<&str>, dest: &str) -> ir::Instruction {
         ir::Instruction::call(
             ir::IRVar {
@@ -496,39 +500,68 @@ pub mod tests {
                 ilic(3, "x3"),
                 imul("x2", "x3", "x4"),
                 iadd("x", "x4", "x5"),
-                icall("print_int", vec!["x5"], "x6"),
             ],
         );
     }
 
     #[test]
     fn test_ir_if() {
-        // This is basically a manual test to and you have to verify the output manually
         assert_ir_eq(
             gi(eif(ebool(true), eint(0), Some(eint(1)))).unwrap(),
-            vec![],
+            vec![
+                ilbc(true, "x"),
+                icondjump("x", "label", "label2"),
+                ilabel("label"),
+                ilic(0, "x3"),
+                icopy("x3", "x2"),
+                ijump("label3"),
+                ilabel("label2"),
+                ilic(1, "x3"),
+                icopy("x4", "x2"),
+                ilabel("label3"),
+                iprint_int("x2", "x5"),
+            ],
         );
     }
 
     #[test]
     fn test_ir_var() {
-        // Manual test
         assert_ir_eq(
             gi(eblock(vec![
                 evar("a", eint(1), None),
                 eassign("a", eint(2)),
             ]))
             .unwrap(),
-            vec![],
+            vec![
+                ilic(1, "x"),
+                icopy("x", "x2"),
+                ilic(2, "x3"),
+                icopy("x3", "x2"),
+                iprint_int("x2", "x4"),
+            ],
         );
     }
 
     #[test]
     fn test_ir_short_circuit() {
-        // Manual test
         assert_ir_eq(
             gi(eif(eand(ebool(false), ebool(true)), eint(1), None)).unwrap(),
-            vec![],
+            vec![
+                ilbc(false, "x"),
+                icondjump("x", "label3", "label4"),
+                ilabel("label3"),
+                ilbc(true, "x2"),
+                icopy("x2", "x3"),
+                ijump("label5"),
+                ilabel("label4"),
+                ilbc(false, "x3"),
+                ijump("label5"),
+                ilabel("label5"),
+                icondjump("x3", "label", "label2"),
+                ilabel("label"),
+                ilic(1, "x4"),
+                ilabel("label2"),
+            ],
         );
     }
 }
