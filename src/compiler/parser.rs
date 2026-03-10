@@ -79,15 +79,18 @@ impl Parser {
             ));
         }
 
-        if expressions.len() == 1 {
-            return Ok(expressions.into_iter().next().unwrap());
-        } else {
-            return Ok(ast::Expression {
-                loc,
-                kind: ast::ExpressionKind::Block { expressions },
-                return_type: None,
-            });
-        }
+        Ok(ast::Expression {
+            loc: loc.clone(),
+            kind: ast::ExpressionKind::Module {
+                name: "main".to_string(),
+                body: Box::new(ast::Expression {
+                    loc,
+                    kind: ast::ExpressionKind::Block { expressions },
+                    return_type: None,
+                }),
+            },
+            return_type: None,
+        })
     }
 
     fn parse_var_declaration(&mut self) -> Result<ast::Expression, String> {
