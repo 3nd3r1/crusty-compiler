@@ -29,8 +29,8 @@ fn typecheck_node(
                 ast::Operation::Equal | ast::Operation::NotEqual => {
                     if left_type != right_type {
                         Err(format!(
-                            "operator {} expected types {} and {} to be equal",
-                            op, left_type, right_type
+                            "{}: operator {} expected types {} and {} to be equal",
+                            node.loc, op, left_type, right_type
                         ))
                     } else {
                         Ok(Type::Bool)
@@ -47,20 +47,21 @@ fn typecheck_node(
                     {
                         if params.len() != 2 {
                             Err(format!(
-                                "operator {} expected {} params, got 2",
+                                "{}: operator {} expected {} params, got 2",
+                                node.loc,
                                 op,
                                 params.len()
                             ))
                         } else if params[0] != left_type || params[1] != right_type {
                             Err(format!(
-                                "operator {} expected ({}, {}), got ({}, {})",
-                                op, params[0], params[1], left_type, right_type
+                                "{}: operator {} expected ({}, {}), got ({}, {})",
+                                node.loc, op, params[0], params[1], left_type, right_type
                             ))
                         } else {
                             Ok(*return_type)
                         }
                     } else {
-                        Err(format!("unexpected operator {}", op))
+                        Err(format!("{}: unexpected operator {}", node.loc, op))
                     }
                 }
             }
@@ -77,20 +78,21 @@ fn typecheck_node(
             {
                 if params.len() != 1 {
                     Err(format!(
-                        "operator {} expected {} params, got 1",
+                        "{}: operator {} expected {} params, got 1",
+                        node.loc,
                         op,
                         params.len()
                     ))
                 } else if params[0] != operand_type {
                     Err(format!(
-                        "operator {} expected ({}), got ({})",
-                        op, params[0], operand_type
+                        "{}: operator {} expected ({}), got ({})",
+                        node.loc, op, params[0], operand_type
                     ))
                 } else {
                     Ok(*return_type)
                 }
             } else {
-                Err(format!("unexpected operator {}", op))
+                Err(format!("{}: unexpected operator {}", node.loc, op))
             }
         }
         ast::ExpressionKind::If {
@@ -101,8 +103,8 @@ fn typecheck_node(
             let condition_type = typecheck_node(&mut *condition, symtab)?;
             if condition_type != Type::Bool {
                 Err(format!(
-                    "expected condition to be of type bool got {}",
-                    condition_type
+                    "{}: expected condition to be of type bool got {}",
+                    node.loc, condition_type
                 ))
             } else {
                 let then_type = typecheck_node(&mut *then_expression, symtab)?;
@@ -111,8 +113,8 @@ fn typecheck_node(
 
                     if then_type != else_type {
                         return Err(format!(
-                            "expected then_expression and else_expression to be same type, got {} and {}",
-                            then_type, else_type
+                            "{}: expected then_expression and else_expression to be same type, got {} and {}",
+                            node.loc, then_type, else_type
                         ));
                     }
                 }
@@ -128,8 +130,8 @@ fn typecheck_node(
             if let Some(value_type) = value_type {
                 if actual_value_type != **value_type {
                     return Err(format!(
-                        "cannot assign {} to variable {} of type {}",
-                        actual_value_type, name, *value_type
+                        "{}: cannot assign {} to variable {} of type {}",
+                        node.loc, actual_value_type, name, *value_type
                     ));
                 }
                 symtab
@@ -167,7 +169,8 @@ fn typecheck_node(
             let condition_type = typecheck_node(&mut *condition, symtab)?;
             if condition_type != Type::Bool {
                 Err(format!(
-                    "expected condition to be of type {} got {}",
+                    "{}: expected condition to be of type {} got {}",
+                    node.loc,
                     Type::Bool,
                     condition_type
                 ))
@@ -185,7 +188,8 @@ fn typecheck_node(
             {
                 if arguments.len() != params.len() {
                     Err(format!(
-                        "Function {} expected {} arguments, got {}",
+                        "{}, Function {} expected {} arguments, got {}",
+                        node.loc,
                         name,
                         params.len(),
                         arguments.len()
@@ -195,8 +199,8 @@ fn typecheck_node(
                         let argument_type = typecheck_node(argument, symtab)?;
                         if argument_type != *param_type {
                             return Err(format!(
-                                "Function {} expected argument to be of type {}, got {}",
-                                name, param_type, argument_type
+                                "{}: Function {} expected argument to be of type {}, got {}",
+                                node.loc, name, param_type, argument_type
                             ));
                         }
                     }
@@ -204,8 +208,8 @@ fn typecheck_node(
                 }
             } else {
                 Err(format!(
-                    "expected {} to be a Function got {}",
-                    name, func_type
+                    "{}: expected {} to be a Function got {}",
+                    node.loc, name, func_type
                 ))
             }
         }
