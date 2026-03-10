@@ -117,9 +117,9 @@ pub fn interpret(
             }
             Ok(Value::None)
         }
-        ast::ExpressionKind::FunctionCall { .. } => {
-            todo!()
-        }
+        ast::ExpressionKind::FunctionCall { .. } => todo!(),
+        ast::ExpressionKind::FunctionDeclaration { .. } => todo!(),
+        ast::ExpressionKind::Module { body, .. } => interpret(&*body, symtab),
     }
 }
 
