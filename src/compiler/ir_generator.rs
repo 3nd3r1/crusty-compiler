@@ -404,7 +404,7 @@ pub mod tests {
         )
     }
 
-    pub fn ilic(value: i64, dest: &str) -> ir::Instruction {
+    pub fn ilic(value: i128, dest: &str) -> ir::Instruction {
         ir::Instruction::load_int_const(
             value,
             ir::IRVar {

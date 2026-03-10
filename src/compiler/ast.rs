@@ -67,7 +67,7 @@ pub struct Expression {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionKind {
     IntLiteral {
-        value: i64,
+        value: i128,
     },
     BoolLiteral {
         value: bool,

@@ -4,7 +4,7 @@ use crate::compiler::{ast, common::SymTab};
 
 #[derive(Debug, Clone)]
 pub enum Value {
-    Int(i64),
+    Int(i128),
     Bool(bool),
     BuiltInFunction(fn(Vec<Value>) -> Result<Value, String>),
     None,
