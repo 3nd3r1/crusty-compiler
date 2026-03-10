@@ -167,3 +167,9 @@ impl std::fmt::Display for Instruction {
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionIR {
+    pub name: String,
+    pub instructions: Vec<Instruction>,
+}
