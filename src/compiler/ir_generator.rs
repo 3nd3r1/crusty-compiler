@@ -336,6 +336,10 @@ impl IrGenerator {
 
                 Ok(var_dest)
             }
+            ast::ExpressionKind::FunctionDeclaration { .. } => {
+                Err(format!("{}: FunctionDeclaration not implemented", node.loc))
+            }
+            ast::ExpressionKind::Module { body, .. } => self.visit(&mut *body),
         }
     }
 }
