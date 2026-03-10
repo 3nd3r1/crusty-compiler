@@ -106,8 +106,8 @@ impl Instruction {
             InstructionKind::LoadIntConst { dest, .. } => vec![dest.clone()],
             InstructionKind::LoadBoolConst { dest, .. } => vec![dest.clone()],
             InstructionKind::Copy { source, dest } => vec![source.clone(), dest.clone()],
-            InstructionKind::Call { fun, args, dest } => {
-                let mut ret = vec![fun.clone(), dest.clone()];
+            InstructionKind::Call { args, dest, .. } => {
+                let mut ret = vec![dest.clone()];
                 for arg in args {
                     ret.push(arg.clone());
                 }
