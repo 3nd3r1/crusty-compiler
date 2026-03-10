@@ -379,13 +379,15 @@ mod tests {
         assert_assembly_eq(
             ga(vec![ilic(42, "a"), icall("my_func", vec!["a"], "res")]).unwrap(),
             make_asm(
-                24,
-                "# LoadIntCost(42, a)\n\
+                16,
+                "# LoadIntConst(42, a)\n\
                  movq $42, -8(%rbp)\n\
                  \n\
-                 # Call(my_func, [IRVar { name: \"a\" }], res)\n\
+                 # Call(my_func, [a], res)\n\
                  movq -8(%rbp), %rdi\n\
-                 callq my_func\n",
+                 callq my_func\n\
+                 movq %rax, -16(%rbp)\n\
+                 ",
             ),
         )
     }
