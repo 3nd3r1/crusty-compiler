@@ -628,6 +628,17 @@ pub mod tests {
         }
     }
 
+    pub fn emain(expressions: Vec<ast::Expression>) -> ast::Expression {
+        ast::Expression {
+            loc: loc(),
+            kind: ast::ExpressionKind::Module {
+                name: "main".to_string(),
+                body: Box::new(eblock(expressions)),
+            },
+            return_type: None,
+        }
+    }
+
     pub fn eblock(expressions: Vec<ast::Expression>) -> ast::Expression {
         ast::Expression {
             loc: loc(),
@@ -667,7 +678,7 @@ pub mod tests {
     fn test_parser_addition() {
         assert_eq!(
             parse(vec![tint("1"), tope("+"), tint("1"), tend()]).unwrap(),
-            eadd(eint(1), eint(1))
+            emain(vec![eadd(eint(1), eint(1))])
         );
     }
 
@@ -675,7 +686,7 @@ pub mod tests {
     fn test_parser_substraction() {
         assert_eq!(
             parse(vec![tint("1"), tope("-"), tint("1"), tend()]).unwrap(),
-            esub(eint(1), eint(1))
+            emain(vec![esub(eint(1), eint(1))])
         );
     }
 
@@ -683,13 +694,13 @@ pub mod tests {
     fn test_parser_comparison() {
         assert_eq!(
             parse(vec![tide("a"), tope("<"), tint("2"), tend()]).unwrap(),
-            elt(eide("a"), eint(2))
+            emain(vec![elt(eide("a"), eint(2))])
         );
     }
 
     #[test]
     fn test_parser_invalid() {
-        assert_eq!(parse(vec![tend()]).unwrap(), eblock(vec![]));
+        assert_eq!(parse(vec![tend()]).unwrap(), emain(vec![]));
         assert!(
             parse(vec![tide("a"), tope("+"), tide("b"), tide("c"), tend()])
                 .unwrap_err()
@@ -714,7 +725,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eadd(esub(eint(1), eint(2)), eint(3))
+            emain(vec![eadd(esub(eint(1), eint(2)), eint(3))])
         );
     }
 
@@ -732,7 +743,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            esub(eint(1), eadd(eint(2), eint(3)))
+            emain(vec![esub(eint(1), eadd(eint(2), eint(3)))])
         );
         assert_eq!(
             parse(vec![
@@ -750,7 +761,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eadd(esub(eint(1), eadd(eint(2), eint(2))), eint(1))
+            emain(vec![eadd(esub(eint(1), eadd(eint(2), eint(2))), eint(1))])
         );
     }
 
@@ -767,7 +778,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eif(ebool(true), eint(1), Some(eint(0)))
+            emain(vec![eif(ebool(true), eint(1), Some(eint(0)))])
         );
         assert_eq!(
             parse(vec![
@@ -778,7 +789,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eif(ebool(true), eint(1), None)
+            emain(vec![eif(ebool(true), eint(1), None)])
         );
         assert_eq!(
             parse(vec![
@@ -795,11 +806,11 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eif(
+            emain(vec![eif(
                 eide("a"),
                 eadd(eide("b"), eide("c")),
                 Some(emul(eide("x"), eide("y")))
-            )
+            )])
         );
         assert_eq!(
             parse(vec![
@@ -814,7 +825,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eadd(eint(1), eif(ebool(true), eint(2), Some(eint(3))))
+            emain(vec![eadd(eint(1), eif(ebool(true), eint(2), Some(eint(3))))])
         );
         assert_eq!(
             parse(vec![
@@ -829,7 +840,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eif(eand(ebool(true), ebool(false)), eide("a"), Some(eint(3)))
+            emain(vec![eif(eand(ebool(true), ebool(false)), eide("a"), Some(eint(3)))])
         );
     }
 
@@ -837,7 +848,7 @@ pub mod tests {
     fn test_parser_function_call() {
         assert_eq!(
             parse(vec![tide("parse"), tpunc("("), tpunc(")"), tend()]).unwrap(),
-            ecall("parse", vec![])
+            emain(vec![ecall("parse", vec![])])
         );
         assert_eq!(
             parse(vec![
@@ -850,7 +861,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            ecall("f", vec![eide("a"), eide("b")])
+            emain(vec![ecall("f", vec![eide("a"), eide("b")])])
         );
         assert_eq!(
             parse(vec![
@@ -863,7 +874,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            ecall("hello", vec![eadd(eint(1), eint(2))])
+            emain(vec![ecall("hello", vec![eadd(eint(1), eint(2))])])
         );
         assert_eq!(
             parse(vec![
@@ -883,13 +894,13 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            ecall(
+            emain(vec![ecall(
                 "hello",
                 vec![
                     eadd(eint(1), eif(ebool(true), eint(2), Some(eint(3)))),
                     eide("c")
                 ]
-            )
+            )])
         );
     }
 
@@ -897,7 +908,7 @@ pub mod tests {
     fn test_parser_assignment() {
         assert_eq!(
             parse(vec![tide("a"), tope("="), tint("3"), tend()]).unwrap(),
-            eassign("a", eint(3))
+            emain(vec![eassign("a", eint(3))])
         );
         assert_eq!(
             parse(vec![
@@ -909,7 +920,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eassign("hello", eadd(eide("a"), eint(3)))
+            emain(vec![eassign("hello", eadd(eide("a"), eint(3)))])
         );
         assert_eq!(
             parse(vec![
@@ -921,7 +932,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eassign("a", eassign("b", eide("c")))
+            emain(vec![eassign("a", eassign("b", eide("c")))])
         );
         assert_eq!(
             parse(vec![
@@ -936,7 +947,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            ecall("f", vec![eassign("a", esub(eide("b"), eide("c")))])
+            emain(vec![ecall("f", vec![eassign("a", esub(eide("b"), eide("c")))])])
         );
     }
 
@@ -944,15 +955,15 @@ pub mod tests {
     fn test_parser_unary() {
         assert_eq!(
             parse(vec![tkeyw("not"), tbool("true"), tend()]).unwrap(),
-            enot(ebool(true))
+            emain(vec![enot(ebool(true))])
         );
         assert_eq!(
             parse(vec![tkeyw("not"), tkeyw("not"), tide("a"), tend()]).unwrap(),
-            enot(enot(eide("a")))
+            emain(vec![enot(enot(eide("a")))])
         );
         assert_eq!(
             parse(vec![tope("-"), tide("a"), tope("+"), tide("b"), tend()]).unwrap(),
-            eadd(eneg(eide("a")), eide("b"))
+            emain(vec![eadd(eneg(eide("a")), eide("b"))])
         );
         assert_eq!(
             parse(vec![
@@ -973,10 +984,10 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eor(
+            emain(vec![eor(
                 eand(eand(enot(enot(eide("a"))), eide("b")), eide("c")),
                 enot(eide("b"))
-            )
+            )])
         );
     }
 
@@ -984,7 +995,7 @@ pub mod tests {
     fn test_parser_block() {
         assert_eq!(
             parse(vec![tpunc("{"), tint("1"), tpunc("}"), tend()]).unwrap(),
-            eblock(vec![eint(1)])
+            emain(vec![eblock(vec![eint(1)])])
         );
         assert_eq!(
             parse(vec![
@@ -996,11 +1007,11 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eblock(vec![eint(1), eint(2)])
+            emain(vec![eblock(vec![eint(1), eint(2)])])
         );
         assert_eq!(
             parse(vec![tpunc("{"), tint("1"), tpunc(";"), tpunc("}"), tend()]).unwrap(),
-            eblock(vec![eint(1), enone()])
+            emain(vec![eblock(vec![eint(1), enone()])])
         );
         assert_eq!(
             parse(vec![
@@ -1014,7 +1025,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eblock(vec![eint(1), eint(2), eint(3)])
+            emain(vec![eblock(vec![eint(1), eint(2), eint(3)])])
         );
         assert_eq!(
             parse(vec![
@@ -1034,11 +1045,11 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eblock(vec![
+            emain(vec![eblock(vec![
                 eassign("a", eint(1)),
                 eassign("b", eint(2)),
                 eadd(eide("a"), eide("b"))
-            ])
+            ])])
         );
         assert_eq!(
             parse(vec![
@@ -1050,7 +1061,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eblock(vec![eblock(vec![eint(1)])])
+            emain(vec![eblock(vec![eblock(vec![eint(1)])])])
         );
         assert_eq!(
             parse(vec![
@@ -1062,7 +1073,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eadd(eint(1), eblock(vec![eint(2)]))
+            emain(vec![eadd(eint(1), eblock(vec![eint(2)]))])
         );
         assert_eq!(
             parse(vec![
@@ -1079,11 +1090,14 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eassign("x", eblock(vec![ecall("f", vec![eide("a")]), eide("b")]))
+            emain(vec![eassign(
+                "x",
+                eblock(vec![ecall("f", vec![eide("a")]), eide("b")])
+            )])
         );
         assert_eq!(
             parse(vec![tint("123"), tpunc(";"), tend()]).unwrap(),
-            eblock(vec![eint(123), enone()])
+            emain(vec![eint(123), enone()])
         );
     }
 
@@ -1138,7 +1152,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eblock(vec![
+            emain(vec![eblock(vec![
                 ewhile(
                     ecall("f", vec![]),
                     eblock(vec![
@@ -1155,7 +1169,7 @@ pub mod tests {
                     ])
                 ),
                 eint(123)
-            ])
+            ])])
         );
     }
 
@@ -1163,7 +1177,7 @@ pub mod tests {
     fn test_parser_var_declaration() {
         assert_eq!(
             parse(vec![tkeyw("var"), tide("a"), tope("="), tint("1"), tend()]).unwrap(),
-            evar("a", eint(1), None)
+            emain(vec![evar("a", eint(1), None)])
         );
         assert_eq!(
             parse(vec![
@@ -1176,7 +1190,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            evar("x", eadd(eint(1), eint(2)), None)
+            emain(vec![evar("x", eadd(eint(1), eint(2)), None)])
         );
         assert_eq!(
             parse(vec![
@@ -1191,7 +1205,11 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            evar("x", eadd(eint(1), eint(2)), Some(types::Type::Int))
+            emain(vec![evar(
+                "x",
+                eadd(eint(1), eint(2)),
+                Some(types::Type::Int)
+            )])
         );
         assert_eq!(
             parse(vec![
@@ -1209,14 +1227,14 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            evar(
+            emain(vec![evar(
                 "f",
                 eide("print_int"),
                 Some(types::Type::Function {
                     params: vec![types::Type::Int],
                     return_type: Box::new(types::Type::Unit),
                 })
-            )
+            )])
         );
         assert_eq!(
             parse(vec![
@@ -1232,7 +1250,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eblock(vec![evar("a", eint(1), None), evar("b", eint(2), None)])
+            emain(vec![evar("a", eint(1), None), evar("b", eint(2), None)])
         );
         assert_eq!(
             parse(vec![
@@ -1245,7 +1263,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eblock(vec![evar("a", eint(1), None)])
+            emain(vec![eblock(vec![evar("a", eint(1), None)])])
         );
         assert_eq!(
             parse(vec![
@@ -1265,11 +1283,11 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eblock(vec![evar(
+            emain(vec![eblock(vec![evar(
                 "a",
                 eblock(vec![evar("b", eint(1), None), eide("b")]),
                 None
-            )])
+            )])])
         );
 
         // Invalid
@@ -1334,7 +1352,10 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eblock(vec![eblock(vec![eide("a")]), eblock(vec![eide("b")])])
+            emain(vec![eblock(vec![
+                eblock(vec![eide("a")]),
+                eblock(vec![eide("b")])
+            ])])
         );
         assert!(parse(vec![tpunc("{"), tide("a"), tide("b"), tpunc("}")]).is_err());
         assert_eq!(
@@ -1351,10 +1372,10 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eblock(vec![
+            emain(vec![eblock(vec![
                 eif(ebool(true), eblock(vec![eide("a")]), None),
                 eide("b")
-            ])
+            ])])
         );
         assert_eq!(
             parse(vec![
@@ -1371,10 +1392,10 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eblock(vec![
+            emain(vec![eblock(vec![
                 eif(ebool(true), eblock(vec![eide("a")]), None),
                 eide("b")
-            ])
+            ])])
         );
         assert!(
             parse(vec![
@@ -1408,11 +1429,11 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eblock(vec![
+            emain(vec![eblock(vec![
                 eif(ebool(true), eblock(vec![eide("a")]), None),
                 eide("b"),
                 eide("c")
-            ])
+            ])])
         );
         assert_eq!(
             parse(vec![
@@ -1432,14 +1453,14 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eblock(vec![
+            emain(vec![eblock(vec![
                 eif(
                     ebool(true),
                     eblock(vec![eide("a")]),
                     Some(eblock(vec![eide("b")]))
                 ),
                 eide("c")
-            ])
+            ])])
         );
         assert_eq!(
             parse(vec![
@@ -1459,13 +1480,13 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eassign(
+            emain(vec![eassign(
                 "x",
                 eblock(vec![
                     eblock(vec![ecall("f", vec![eide("a")])]),
                     eblock(vec![eide("b")])
                 ])
-            )
+            )])
         );
         assert_eq!(
             parse(vec![
@@ -1487,7 +1508,7 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            eblock(vec![
+            emain(vec![
                 evar(
                     "x",
                     eblock(vec![
