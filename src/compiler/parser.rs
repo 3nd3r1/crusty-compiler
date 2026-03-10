@@ -66,9 +66,9 @@ impl Parser {
 
         if self.peek().kind != TokenKind::End {
             return Err(format!(
-                "{}: expected End got {:?}",
+                "{}: expected End got '{}'",
                 self.peek().loc,
-                self.peek().kind
+                self.peek().text
             ));
         }
 
@@ -451,6 +451,9 @@ impl Parser {
             }
             ast::ExpressionKind::While { do_expression, .. } => {
                 matches!(do_expression.kind, ast::ExpressionKind::Block { .. })
+            }
+            ast::ExpressionKind::VarDeclaration { value, .. } => {
+                matches!(value.kind, ast::ExpressionKind::Block { .. })
             }
             _ => false,
         }
