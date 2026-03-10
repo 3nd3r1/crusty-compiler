@@ -42,8 +42,7 @@ impl Parser {
         Ok(token)
     }
 
-    fn parse(&mut self) -> Result<ast::Expression, String> {
-        let loc = self.peek().loc.clone();
+    fn parse(&mut self) -> Result<ast::Module, String> {
         let mut expressions = vec![];
 
         while self.peek().kind != TokenKind::End {
@@ -79,17 +78,17 @@ impl Parser {
             ));
         }
 
-        Ok(ast::Expression {
-            loc: loc.clone(),
-            kind: ast::ExpressionKind::Module {
+        let loc = self.peek().loc.clone();
+        Ok(ast::Module {
+            functions: vec![ast::FunctionDeclaration {
                 name: "main".to_string(),
                 body: Box::new(ast::Expression {
-                    loc,
+                    loc: loc.clone(),
                     kind: ast::ExpressionKind::Block { expressions },
                     return_type: None,
                 }),
-            },
-            return_type: None,
+                return_type: None,
+            }],
         })
     }
 
@@ -470,7 +469,7 @@ impl Parser {
     }
 }
 
-pub fn parse(tokens: Vec<Token>) -> Result<ast::Expression, String> {
+pub fn parse(tokens: Vec<Token>) -> Result<ast::Module, String> {
     let binary_operators = vec![
         vec!["or"],
         vec!["and"],
@@ -628,14 +627,13 @@ pub mod tests {
         }
     }
 
-    pub fn emain(expressions: Vec<ast::Expression>) -> ast::Expression {
-        ast::Expression {
-            loc: loc(),
-            kind: ast::ExpressionKind::Module {
+    pub fn emain(expressions: Vec<ast::Expression>) -> ast::Module {
+        ast::Module {
+            functions: vec![ast::FunctionDeclaration {
                 name: "main".to_string(),
                 body: Box::new(eblock(expressions)),
-            },
-            return_type: None,
+                return_type: None,
+            }],
         }
     }
 
@@ -825,7 +823,10 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            emain(vec![eadd(eint(1), eif(ebool(true), eint(2), Some(eint(3))))])
+            emain(vec![eadd(
+                eint(1),
+                eif(ebool(true), eint(2), Some(eint(3)))
+            )])
         );
         assert_eq!(
             parse(vec![
@@ -840,7 +841,11 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            emain(vec![eif(eand(ebool(true), ebool(false)), eide("a"), Some(eint(3)))])
+            emain(vec![eif(
+                eand(ebool(true), ebool(false)),
+                eide("a"),
+                Some(eint(3))
+            )])
         );
     }
 
@@ -947,7 +952,10 @@ pub mod tests {
                 tend()
             ])
             .unwrap(),
-            emain(vec![ecall("f", vec![eassign("a", esub(eide("b"), eide("c")))])])
+            emain(vec![ecall(
+                "f",
+                vec![eassign("a", esub(eide("b"), eide("c")))]
+            )])
         );
     }
 
