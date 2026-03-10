@@ -6,6 +6,12 @@ pub struct Location {
     pub column: u32,
 }
 
+impl std::fmt::Display for Location {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Line {} Column {}", self.line, self.column)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct SymTab<V> {
     pub locals: HashMap<String, V>,
