@@ -1450,5 +1450,37 @@ pub mod tests {
                 ])
             )
         );
+        assert_eq!(
+            parse(vec![
+                tkeyw("var"),
+                tide("x"),
+                tope("="),
+                tpunc("{"),
+                tpunc("{"),
+                tide("print_int"),
+                tpunc("("),
+                tint("1"),
+                tpunc(")"),
+                tpunc("}"),
+                tpunc("{"),
+                tint("2"),
+                tpunc("}"),
+                tpunc("}"),
+                tide("x"),
+                tend()
+            ])
+            .unwrap(),
+            eblock(vec![
+                evar(
+                    "x",
+                    eblock(vec![
+                        eblock(vec![ecall("print_int", vec![eint(1)])]),
+                        eblock(vec![eint(2)])
+                    ]),
+                    None
+                ),
+                eide("x")
+            ])
+        )
     }
 }
