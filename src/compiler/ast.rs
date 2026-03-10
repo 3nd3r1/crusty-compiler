@@ -110,4 +110,13 @@ pub enum ExpressionKind {
         value: Box<Expression>,
         value_type: Option<Box<Type>>,
     },
+    FunctionDeclaration {
+        name: String,
+        body: Box<Expression>,
+        return_type: Option<Type>,
+    },
+    Module {
+        name: String,
+        body: Box<Expression>,
+    },
 }
