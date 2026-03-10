@@ -23,7 +23,19 @@ impl PartialEq for Value {
 
 type ValueSymTab = SymTab<Value>;
 
-pub fn interpret(
+pub fn interpret(module: &ast::Module) -> Result<Value, String> {
+    let symtab = Rc::new(RefCell::new(ValueSymTab {
+        locals: builtins::build_builtin_lib(),
+        parent: None,
+    }));
+    if let Some(main) = module.functions.last() {
+        interpret_node(&main.body, &symtab)
+    } else {
+        Err("module must contain at least a main function".to_string())
+    }
+}
+
+fn interpret_node(
     node: &ast::Expression,
     symtab: &Rc<RefCell<ValueSymTab>>,
 ) -> Result<Value, String> {
@@ -33,12 +45,12 @@ pub fn interpret(
         ast::ExpressionKind::BoolLiteral { value } => Ok(Value::Bool(*value)),
         ast::ExpressionKind::Identifier { value } => symtab.borrow().lookup(value),
         ast::ExpressionKind::BinaryOp { left, right, op } => {
-            let left = interpret(&*left, symtab)?;
+            let left = interpret_node(&*left, symtab)?;
             match &op {
                 ast::Operation::Or if left == Value::Bool(true) => Ok(Value::Bool(true)),
                 ast::Operation::And if left == Value::Bool(false) => Ok(Value::Bool(false)),
                 _ => {
-                    let right = interpret(&*right, symtab)?;
+                    let right = interpret_node(&*right, symtab)?;
                     let identifier = op.to_string();
                     let func = symtab.borrow().lookup(&identifier)?;
                     if let Value::BuiltInFunction(func) = func {
@@ -50,7 +62,7 @@ pub fn interpret(
             }
         }
         ast::ExpressionKind::UnaryOp { operand, op } => {
-            let operand = interpret(&*operand, symtab)?;
+            let operand = interpret_node(&*operand, symtab)?;
             let identifier = format!("unary_{}", op);
 
             let func = symtab.borrow().lookup(&identifier)?;
@@ -65,11 +77,11 @@ pub fn interpret(
             then_expression,
             else_expression,
         } => {
-            let cond = interpret(&*condition, symtab)?;
+            let cond = interpret_node(&*condition, symtab)?;
             match (cond, then_expression, else_expression) {
-                (Value::Bool(true), then_expression, _) => interpret(&*then_expression, symtab),
+                (Value::Bool(true), then_expression, _) => interpret_node(&*then_expression, symtab),
                 (Value::Bool(false), _, Some(else_expression)) => {
-                    interpret(&*else_expression, symtab)
+                    interpret_node(&*else_expression, symtab)
                 }
                 (cond, _, _) => Err(format!("unexpected condition {:?}", cond)),
             }
@@ -79,12 +91,12 @@ pub fn interpret(
             value,
             value_type: _,
         } => {
-            let value = interpret(&*value, symtab)?;
+            let value = interpret_node(&*value, symtab)?;
             symtab.borrow_mut().declare(name, value);
             Ok(Value::None)
         }
         ast::ExpressionKind::Assignment { name, right } => {
-            let value = interpret(&*right, symtab)?;
+            let value = interpret_node(&*right, symtab)?;
             symtab.borrow_mut().assign(name, value.clone())?;
             Ok(value)
         }
@@ -96,9 +108,9 @@ pub fn interpret(
 
             if let Some((last, expressions)) = expressions.split_last() {
                 for expression in expressions {
-                    interpret(expression, &block_symtab)?;
+                    interpret_node(expression, &block_symtab)?;
                 }
-                interpret(last, &block_symtab)
+                interpret_node(last, &block_symtab)
             } else {
                 Ok(Value::None)
             }
@@ -108,18 +120,16 @@ pub fn interpret(
             do_expression,
         } => {
             loop {
-                let value = interpret(&*condition, symtab)?;
+                let value = interpret_node(&*condition, symtab)?;
                 if value == Value::Bool(false) {
                     break;
                 } else {
-                    interpret(&*do_expression, symtab)?;
+                    interpret_node(&*do_expression, symtab)?;
                 }
             }
             Ok(Value::None)
         }
         ast::ExpressionKind::FunctionCall { .. } => todo!(),
-        ast::ExpressionKind::FunctionDeclaration { .. } => todo!(),
-        ast::ExpressionKind::Module { body, .. } => interpret(&*body, symtab),
     }
 }
 
@@ -271,38 +281,31 @@ mod tests {
     use super::*;
     use crate::compiler::parser::tests::*;
 
-    fn empty_symtab() -> ValueSymTab {
-        ValueSymTab {
-            locals: builtins::build_builtin_lib(),
-            parent: None,
-        }
-    }
-
-    fn ip(node: &ast::Expression) -> Result<Value, String> {
-        interpret(node, &Rc::new(RefCell::new(empty_symtab())))
+    fn ip(node: ast::Expression) -> Result<Value, String> {
+        interpret(&emain(vec![node]))
     }
 
     #[test]
     fn test_interpreter_binary() {
-        assert_eq!(ip(&eadd(eint(2), eint(3))).unwrap(), Value::Int(5));
-        assert_eq!(ip(&esub(eint(2), eint(3))).unwrap(), Value::Int(-1));
+        assert_eq!(ip(eadd(eint(2), eint(3))).unwrap(), Value::Int(5));
+        assert_eq!(ip(esub(eint(2), eint(3))).unwrap(), Value::Int(-1));
         assert_eq!(
-            ip(&eadd(eint(2), emul(eint(2), eint(3)))).unwrap(),
+            ip(eadd(eint(2), emul(eint(2), eint(3)))).unwrap(),
             Value::Int(8)
         );
     }
 
     #[test]
     fn test_interpreter_unary() {
-        assert_eq!(ip(&eneg(eint(2))).unwrap(), Value::Int(-2));
-        assert_eq!(ip(&eneg(eneg(eint(2)))).unwrap(), Value::Int(2));
-        assert_eq!(ip(&enot(ebool(true))).unwrap(), Value::Bool(false));
+        assert_eq!(ip(eneg(eint(2))).unwrap(), Value::Int(-2));
+        assert_eq!(ip(eneg(eneg(eint(2)))).unwrap(), Value::Int(2));
+        assert_eq!(ip(enot(ebool(true))).unwrap(), Value::Bool(false));
     }
 
     #[test]
     fn test_interpreter_assignment() {
         assert_eq!(
-            ip(&eblock(vec![
+            ip(eblock(vec![
                 evar("a", eint(3), None),
                 evar("b", eint(2), None),
                 eadd(eide("a"), eide("b"))
@@ -312,7 +315,7 @@ mod tests {
         );
 
         assert_eq!(
-            ip(&eblock(vec![
+            ip(eblock(vec![
                 evar("a", eint(3), None),
                 evar("b", eint(2), None),
                 eassign("a", eassign("b", eint(6)))
@@ -325,7 +328,7 @@ mod tests {
     #[test]
     fn test_interpreter_while() {
         assert_eq!(
-            ip(&eblock(vec![
+            ip(eblock(vec![
                 evar("a", eint(0), None),
                 ewhile(
                     elt(eide("a"), eint(5)),
@@ -341,7 +344,7 @@ mod tests {
     #[test]
     fn test_interpreter_short_circuit() {
         assert_eq!(
-            ip(&eblock(vec![
+            ip(eblock(vec![
                 evar("a", ebool(false), None),
                 eor(
                     ebool(true),
