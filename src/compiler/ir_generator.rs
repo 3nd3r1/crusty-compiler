@@ -378,7 +378,11 @@ pub mod tests {
     use crate::compiler::parser::tests::*;
     use crate::compiler::tokenizer::tests::loc;
 
-    fn gi(mut node: ast::Expression) -> Result<Vec<ir::Instruction>, String> {
+    fn gi(
+        mut node: ast::Expression,
+        return_type: Option<Type>,
+    ) -> Result<Vec<ir::Instruction>, String> {
+        node.return_type = return_type.or_else(|| Some(Type::Unit));
         generate_ir(&mut node)
     }
 
@@ -503,7 +507,7 @@ pub mod tests {
     #[test]
     fn test_ir_generator_math() {
         assert_ir_eq(
-            gi(eadd(eint(1), emul(eint(2), eint(3)))).unwrap(),
+            gi(eadd(eint(1), emul(eint(2), eint(3))), Some(Type::Int)).unwrap(),
             vec![
                 ilic(1, "x"),
                 ilic(2, "x2"),
@@ -515,9 +519,9 @@ pub mod tests {
     }
 
     #[test]
-    fn test_ir_if() {
+    fn test_ir_generator_if() {
         assert_ir_eq(
-            gi(eif(ebool(true), eint(0), Some(eint(1)))).unwrap(),
+            gi(eif(ebool(true), eint(0), Some(eint(1))), Some(Type::Int)).unwrap(),
             vec![
                 ilbc(true, "x"),
                 icondjump("x", "label", "label2"),
@@ -526,7 +530,7 @@ pub mod tests {
                 icopy("x3", "x2"),
                 ijump("label3"),
                 ilabel("label2"),
-                ilic(1, "x3"),
+                ilic(1, "x4"),
                 icopy("x4", "x2"),
                 ilabel("label3"),
                 iprint_int("x2", "x5"),
@@ -535,12 +539,12 @@ pub mod tests {
     }
 
     #[test]
-    fn test_ir_var() {
+    fn test_ir_generator_var() {
         assert_ir_eq(
-            gi(eblock(vec![
-                evar("a", eint(1), None),
-                eassign("a", eint(2)),
-            ]))
+            gi(
+                eblock(vec![evar("a", eint(1), None), eassign("a", eint(2))]),
+                Some(Type::Int),
+            )
             .unwrap(),
             vec![
                 ilic(1, "x"),
@@ -553,9 +557,9 @@ pub mod tests {
     }
 
     #[test]
-    fn test_ir_short_circuit() {
+    fn test_ir_generator_short_circuit() {
         assert_ir_eq(
-            gi(eif(eand(ebool(false), ebool(true)), eint(1), None)).unwrap(),
+            gi(eif(eand(ebool(false), ebool(true)), eint(1), None), None).unwrap(),
             vec![
                 ilbc(false, "x"),
                 icondjump("x", "label3", "label4"),
