@@ -29,10 +29,21 @@ pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
     let mut remaining_code = source_code;
     let mut tokens = Vec::new();
 
+    let mut line = 1;
+    let mut column = 1;
+
     while !remaining_code.is_empty() {
         let mut null_match_found = false;
         for pattern in &null_patterns {
             if let Some(matched) = pattern.find(remaining_code) {
+                for char in matched.as_str().chars() {
+                    if char == '\n' {
+                        line += 1;
+                        column = 1;
+                    } else {
+                        column += 1;
+                    }
+                }
                 remaining_code = &remaining_code[matched.end()..];
                 null_match_found = true;
                 break;
@@ -48,8 +59,16 @@ pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
                 let token = Token {
                     kind: token_kind.clone(),
                     text: matched.as_str().to_string(),
-                    loc: Location { line: 0, column: 0 },
+                    loc: Location { line, column },
                 };
+                for char in matched.as_str().chars() {
+                    if char == '\n' {
+                        line += 1;
+                        column = 1;
+                    } else {
+                        column += 1;
+                    }
+                }
                 tokens.push(token);
                 remaining_code = &remaining_code[matched.end()..];
                 token_match_found = true;
@@ -59,7 +78,8 @@ pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
 
         if !token_match_found {
             return Err(format!(
-                "Unexpected character: '{}'",
+                "{}: Unexpected character: '{}'",
+                Location { line, column },
                 remaining_code.chars().next().unwrap()
             ));
         }
@@ -68,11 +88,9 @@ pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
     tokens.push(Token {
         kind: TokenKind::End,
         text: String::new(),
-        loc: tokens
-            .last()
-            .map(|t| t.loc.clone())
-            .unwrap_or(Location { line: 1, column: 1 }),
+        loc: Location { line, column },
     });
+
     Ok(tokens)
 }
 
@@ -373,5 +391,30 @@ pub mod tests {
                 tpunc("}")
             ]
         );
+    }
+
+    #[test]
+    fn test_tokenizer_location() {
+        let mut tokens = vec![
+            tkeyw("var"),
+            tide("a"),
+            tope("="),
+            tint("1"),
+            tpunc(";"),
+            tide("a"),
+            tend(),
+        ];
+        tokens[0].loc = Location { line: 1, column: 1 };
+        tokens[1].loc = Location { line: 1, column: 5 };
+        tokens[2].loc = Location { line: 1, column: 7 };
+        tokens[3].loc = Location { line: 1, column: 9 };
+        tokens[4].loc = Location {
+            line: 1,
+            column: 10,
+        };
+        tokens[5].loc = Location { line: 2, column: 2 };
+        tokens[6].loc = Location { line: 2, column: 3 };
+
+        assert_eq!(tokenize("var a = 1;\n a").unwrap(), tokens);
     }
 }
