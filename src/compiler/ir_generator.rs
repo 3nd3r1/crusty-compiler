@@ -135,11 +135,13 @@ impl IrGenerator {
 
                         self.ins
                             .push(ir::Instruction::label(l_skip, node.loc.clone()));
-                        self.ins.push(ir::Instruction::copy(
-                            var_left,
+                        self.ins.push(ir::Instruction::load_bool_const(
+                            matches!(op, ast::Operation::Or),
                             var_result.clone(),
                             node.loc.clone(),
                         ));
+                        self.ins
+                            .push(ir::Instruction::jump(l_end.clone(), node.loc.clone()));
 
                         self.ins
                             .push(ir::Instruction::label(l_end, node.loc.clone()));
