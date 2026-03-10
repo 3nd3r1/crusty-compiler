@@ -61,6 +61,13 @@ impl Parser {
                 }
             } else {
                 self.consume(TokenKind::Punctuation, Some(";"))?;
+                if self.peek().kind == TokenKind::End {
+                    expressions.push(ast::Expression {
+                        loc: self.peek().loc.clone(),
+                        kind: ast::ExpressionKind::NoneLiteral,
+                        return_type: None,
+                    });
+                }
             }
         }
 
@@ -683,7 +690,7 @@ pub mod tests {
         assert!(
             parse(vec![tide("a"), tope("+"), tide("b"), tide("c"), tend()])
                 .unwrap_err()
-                .contains("expected End got Identifier")
+                .contains("expected End got 'c'")
         );
         assert!(
             parse(vec![tpunc("{"), tint("1"), tide("a"), tpunc("}"), tend()])
@@ -1070,6 +1077,10 @@ pub mod tests {
             ])
             .unwrap(),
             eassign("x", eblock(vec![ecall("f", vec![eide("a")]), eide("b")]))
+        );
+        assert_eq!(
+            parse(vec![tint("123"), tpunc(";"), tend()]).unwrap(),
+            eblock(vec![eint(123), enone()])
         );
     }
 
