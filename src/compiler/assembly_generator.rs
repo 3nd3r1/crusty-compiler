@@ -289,7 +289,7 @@ mod tests {
     }
 
     fn assert_assembly_eq(left: String, right: String) {
-        assert!(left == right, "expected:\n{}\ngot:\n{}", right, left);
+        pretty_assertions::assert_eq!(left, right);
     }
 
     fn make_asm(stack_used: u32, body: &str) -> String {
@@ -307,30 +307,70 @@ mod tests {
              {}\n\
              movq %rbp, %rsp\n\
              popq %rbp\n\
-             ret",
+             ret\n",
             stack_used, body
         )
     }
 
     #[test]
-    fn test_assembly_generator_basic() {
-        // Manual test
+    fn test_assembly_generator_if() {
         assert_assembly_eq(
             ga(vec![
                 ilbc(true, "x"),
-                icopy("x", "x2"),
-                icondjump("x2", "then", "else"),
+                icondjump("x", "then", "else"),
                 ilabel("then"),
-                ilic(1, "x4"),
-                icopy("x4", "x3"),
+                ilic(1, "x3"),
+                icopy("x3", "x2"),
                 ijump("if_end"),
                 ilabel("else"),
-                ilic(2, "x5"),
-                icopy("x5", "x3"),
+                ilic(2, "x4"),
+                icopy("x4", "x2"),
                 ilabel("if_end"),
+                iprint_int("x2", "x5"),
             ])
             .unwrap(),
-            "".to_string(),
+            make_asm(
+                40,
+                "# LoadBoolConst(true, x)\n\
+                 movq $1, -8(%rbp)\n\
+                 \n\
+                 # CondJump(x, then, else)\n\
+                 cmpq $0, -8(%rbp)\n\
+                 jne .Lthen\n\
+                 jmp .Lelse\n\
+                 \n\
+                 # Label(then)\n\
+                 .Lthen:\n\
+                 \n\
+                 # LoadIntConst(1, x3)\n\
+                 movq $1, -16(%rbp)\n\
+                 \n\
+                 # Copy(x3, x2)\n\
+                 movq -16(%rbp), %rax\n\
+                 movq %rax, -24(%rbp)\n\
+                 \n\
+                 # Jump(if_end)\n\
+                 jmp .Lif_end\n\
+                 \n\
+                 # Label(else)\n\
+                 .Lelse:\n\
+                 \n\
+                 # LoadIntConst(2, x4)\n\
+                 movq $2, -32(%rbp)\n\
+                 \n\
+                 # Copy(x4, x2)\n\
+                 movq -32(%rbp), %rax\n\
+                 movq %rax, -24(%rbp)\n\
+                 \n\
+                 # Label(if_end)\n\
+                 .Lif_end:\n\
+                 \n\
+                 # Call(print_int, [x2], x5)\n\
+                 movq -24(%rbp), %rdi\n\
+                 callq print_int\n\
+                 movq %rax, -40(%rbp)\n\
+                 ",
+            ),
         )
     }
 

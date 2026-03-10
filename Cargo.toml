@@ -5,6 +5,7 @@ edition = "2024"
 
 [dev-dependencies]
 libtest-mimic = "0.8"
+pretty_assertions = "1"
 
 [dependencies.tempfile]
 version = "3"
