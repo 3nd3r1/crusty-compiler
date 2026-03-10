@@ -20,14 +20,14 @@ impl Parser {
 
         if token.kind != token_kind {
             return Err(format!(
-                "{:?}: expected {:?} got {:?}",
+                "{}: expected {:?} got {:?}",
                 token.loc, token_kind, token.kind
             ));
         }
 
         if expected.is_some_and(|value| token.text != value) {
             return Err(format!(
-                "{:?}: expected '{:?}' got '{:?}'",
+                "{}: expected '{}' got '{}'",
                 token.loc,
                 expected.unwrap(),
                 token.text
@@ -66,7 +66,7 @@ impl Parser {
 
         if self.peek().kind != TokenKind::End {
             return Err(format!(
-                "{:?}: expected End got {:?}",
+                "{}: expected End got {:?}",
                 self.peek().loc,
                 self.peek().kind
             ));
@@ -130,7 +130,7 @@ impl Parser {
                 })
             } else {
                 Err(format!(
-                    "{:?}: Left side of assignment must be a variable name",
+                    "{}: Left side of assignment must be a variable name",
                     loc
                 ))
             }
@@ -204,7 +204,7 @@ impl Parser {
             }
             _ => {
                 return Err(format!(
-                    "{:?}: expected a literal, identifier, '(', 'if', '{{' or 'while' got {:?}",
+                    "{}: expected a literal, identifier, '(', 'if', '{{' or 'while' got {}",
                     self.peek().loc,
                     self.peek().text
                 ));
@@ -221,7 +221,7 @@ impl Parser {
                 value: token
                     .text
                     .parse()
-                    .map_err(|_| format!("{:?}: invalid number", token.loc))?,
+                    .map_err(|_| format!("{}: invalid number", token.loc))?,
             },
             return_type: None,
         })
@@ -252,7 +252,7 @@ impl Parser {
                 value: token
                     .text
                     .parse::<bool>()
-                    .map_err(|_| format!("{:?}: invalid boolean", token.loc))?,
+                    .map_err(|_| format!("{}: invalid boolean", token.loc))?,
             },
             return_type: None,
         })
@@ -385,7 +385,7 @@ impl Parser {
             "or" => return Ok(ast::Operation::Or),
             "and" => return Ok(ast::Operation::And),
             _ => {
-                return Err(format!("{:?}: expected an operator", token.loc));
+                return Err(format!("{}: expected an operator", token.loc));
             }
         }
     }
@@ -397,7 +397,7 @@ impl Parser {
             "-" => return Ok(ast::UnaryOperation::Neg),
             "not" => return Ok(ast::UnaryOperation::Not),
             _ => {
-                return Err(format!("{:?}: expected '-' or 'not'", token.loc));
+                return Err(format!("{}: expected '-' or 'not'", token.loc));
             }
         }
     }
@@ -430,7 +430,7 @@ impl Parser {
                 "Int" => Ok(types::Type::Int),
                 "Bool" => Ok(types::Type::Bool),
                 "Unit" => Ok(types::Type::Unit),
-                _ => Err(format!("{:?}: expected a type", token.loc)),
+                _ => Err(format!("{}: expected a type", token.loc)),
             }
         }
     }
