@@ -758,6 +758,14 @@ pub mod tests {
         }
     }
 
+    pub fn ewithtype(expression: ast::Expression, return_type: types::Type) -> ast::Expression {
+        ast::Expression {
+            loc: expression.loc,
+            kind: expression.kind,
+            return_type: Some(return_type),
+        }
+    }
+
     #[test]
     fn test_parser_addition() {
         assert_eq!(
