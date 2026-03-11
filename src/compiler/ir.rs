@@ -46,6 +46,9 @@ pub enum InstructionKind {
     Label {
         label: Label,
     },
+    Return {
+        value: IRVar,
+    },
 }
 
 impl Instruction {
@@ -97,6 +100,13 @@ impl Instruction {
     pub fn label(label: Label, location: Location) -> Self {
         Instruction {
             kind: InstructionKind::Label { label },
+            location,
+        }
+    }
+
+    pub fn ret(value: IRVar, location: Location) -> Self {
+        Instruction {
+            kind: InstructionKind::Return { value },
             location,
         }
     }
@@ -163,6 +173,9 @@ impl std::fmt::Display for Instruction {
             }
             InstructionKind::Label { label } => {
                 write!(f, "Label({})", label)
+            }
+            InstructionKind::Return { value } => {
+                write!(f, "Return({})", value)
             }
         }
     }
