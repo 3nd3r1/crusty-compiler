@@ -629,12 +629,27 @@ pub mod tests {
     }
 
     pub fn emain(expressions: Vec<ast::Expression>) -> ast::Module {
-        ast::Module {
-            functions: vec![ast::FunctionDeclaration {
-                name: "main".to_string(),
-                body: Box::new(eblock(expressions)),
-                return_type: None,
-            }],
+        emodule(vec![efunction("main", vec![], eblock(expressions), None)])
+    }
+
+    pub fn emodule(functions: Vec<ast::FunctionDeclaration>) -> ast::Module {
+        ast::Module { functions }
+    }
+
+    pub fn efunction(
+        name: &str,
+        params: Vec<(&str, types::Type)>,
+        body: ast::Expression,
+        return_type: Option<types::Type>,
+    ) -> ast::FunctionDeclaration {
+        ast::FunctionDeclaration {
+            name: name.to_string(),
+            params: params
+                .into_iter()
+                .map(|(n, t)| (n.to_string(), t.clone()))
+                .collect(),
+            body: Box::new(body),
+            return_type,
         }
     }
 
@@ -907,6 +922,42 @@ pub mod tests {
                     eide("c")
                 ]
             )])
+        );
+    }
+
+    #[test]
+    fn test_parser_function_declaration() {
+        assert_eq!(
+            parse(vec![
+                tkeyw("fun"),
+                tide("foo"),
+                tpunc("("),
+                tide("a"),
+                tpunc(":"),
+                tide("Int"),
+                tpunc(")"),
+                tpunc(":"),
+                tide("Int"),
+                tpunc("{"),
+                tkeyw("return"),
+                tide("a"),
+                tpunc("}"),
+                tide("foo"),
+                tpunc("("),
+                tint("1"),
+                tpunc(")"),
+                tend()
+            ])
+            .unwrap(),
+            emodule(vec![
+                efunction(
+                    "foo",
+                    vec![("a", types::Type::Int)],
+                    eblock(vec![eide("a")]),
+                    Some(types::Type::Int),
+                ),
+                efunction("main", vec![], eblock(vec![ecall("foo", vec![eint(1)])]), None)
+            ])
         );
     }
 
