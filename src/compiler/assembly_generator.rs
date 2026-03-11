@@ -150,6 +150,7 @@ impl AssemblyGenerator {
 
                     self.emit(&format!("movq %rax, {}", dest_ref));
                 }
+                ir::InstructionKind::Return { .. } => todo!(),
             }
             self.emit("");
         }
