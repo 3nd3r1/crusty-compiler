@@ -79,7 +79,9 @@ fn interpret_node(
         } => {
             let cond = interpret_node(&*condition, symtab)?;
             match (cond, then_expression, else_expression) {
-                (Value::Bool(true), then_expression, _) => interpret_node(&*then_expression, symtab),
+                (Value::Bool(true), then_expression, _) => {
+                    interpret_node(&*then_expression, symtab)
+                }
                 (Value::Bool(false), _, Some(else_expression)) => {
                     interpret_node(&*else_expression, symtab)
                 }
@@ -130,6 +132,7 @@ fn interpret_node(
             Ok(Value::None)
         }
         ast::ExpressionKind::FunctionCall { .. } => todo!(),
+        ast::ExpressionKind::Return { .. } => todo!(),
     }
 }
 

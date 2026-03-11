@@ -224,6 +224,7 @@ fn typecheck_node(
                 ))
             }
         }
+        ast::ExpressionKind::Return { .. } => todo!(),
     }?;
 
     node.return_type = Some(return_type.clone());

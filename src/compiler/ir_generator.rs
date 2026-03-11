@@ -347,6 +347,7 @@ impl IrGenerator {
 
                 Ok(var_dest)
             }
+            ast::ExpressionKind::Return { .. } => todo!(),
         }
     }
 }
