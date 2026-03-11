@@ -91,7 +91,7 @@ impl Parser {
                 kind: ast::ExpressionKind::Block { expressions },
                 return_type: None,
             }),
-            return_type: None,
+            return_type: types::Type::Unit,
         });
 
         Ok(ast::Module { functions })
@@ -118,10 +118,10 @@ impl Parser {
         self.consume(TokenKind::Punctuation, Some(")"))?;
 
         // Return type
-        let mut return_type: Option<types::Type> = None;
+        let mut return_type = types::Type::Unit;
         if self.peek().text == ":" {
             self.consume(TokenKind::Punctuation, Some(":"))?;
-            return_type = Some(self.parse_type()?);
+            return_type = self.parse_type()?;
         }
 
         // Body
@@ -554,8 +554,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<ast::Module, String> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use pretty_assertions::assert_eq;
     use crate::compiler::tokenizer::tests::*;
+    use pretty_assertions::assert_eq;
 
     pub fn eint(value: i128) -> ast::Expression {
         ast::Expression {
@@ -709,7 +709,7 @@ pub mod tests {
                 .map(|(n, t)| (n.to_string(), t.clone()))
                 .collect(),
             body: Box::new(body),
-            return_type,
+            return_type: return_type.unwrap_or(types::Type::Unit),
         }
     }
 
