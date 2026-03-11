@@ -48,15 +48,13 @@ impl Locals {
 
 struct AssemblyGenerator {
     lines: Vec<String>,
-    locals: Locals,
     all_intrinsics: HashMap<String, intrinsics::IntrinsicFun>,
 }
 
 impl AssemblyGenerator {
-    fn new(instructions: &Vec<ir::Instruction>) -> Self {
+    fn new() -> Self {
         Self {
             lines: Vec::new(),
-            locals: Locals::from_instructions(instructions),
             all_intrinsics: intrinsics::build_all_instrinsics(),
         }
     }
@@ -65,23 +63,35 @@ impl AssemblyGenerator {
         self.lines.push(line.to_string());
     }
 
-    fn generate(&mut self, instructions: Vec<ir::Instruction>) -> Result<String, String> {
+    fn generate(&mut self, function_irs: Vec<ir::FunctionIR>) -> Result<String, String> {
         self.emit(".extern print_int");
         self.emit(".extern print_bool");
         self.emit(".extern read_int");
-        self.emit(".global main");
-        self.emit(".type main, @function");
         self.emit(".section .text");
-        self.emit("main:");
+
+        for function_ir in function_irs {
+            self.generate_function(&function_ir)?;
+        }
+
+        Ok(self.lines.join("\n") + "\n")
+    }
+
+    fn generate_function(&mut self, function_ir: &ir::FunctionIR) -> Result<(), String> {
+        let locals = Locals::from_instructions(&function_ir.instructions);
+
+        self.emit(&format!("# {}", function_ir.name));
+        self.emit(&format!(".global {}", function_ir.name));
+        self.emit(&format!(".type {}, @function", function_ir.name));
+        self.emit(&format!("{}:", function_ir.name));
         self.emit("pushq %rbp");
         self.emit("movq %rsp, %rbp");
-        self.emit(&format!("subq ${}, %rsp", self.locals.stack_used * 8));
+        self.emit(&format!("subq ${}, %rsp", locals.stack_used * 8));
 
-        for instr in instructions {
+        for instr in &function_ir.instructions {
             self.emit(&format!("# {}", instr));
             match &instr.kind {
                 ir::InstructionKind::LoadIntConst { value, dest } => {
-                    let dest_ref = self.locals.get_ref(dest)?;
+                    let dest_ref = locals.get_ref(dest)?;
                     if i32::MIN as i128 <= *value && *value <= i32::MAX as i128 {
                         self.emit(&format!("movq ${}, {}", value, dest_ref));
                     } else {
@@ -90,12 +100,12 @@ impl AssemblyGenerator {
                     }
                 }
                 ir::InstructionKind::LoadBoolConst { value, dest } => {
-                    let dest_ref = self.locals.get_ref(dest)?;
+                    let dest_ref = locals.get_ref(dest)?;
                     self.emit(&format!("movq ${}, {}", *value as i32, dest_ref));
                 }
                 ir::InstructionKind::Copy { source, dest } => {
-                    let source_ref = self.locals.get_ref(source)?;
-                    let dest_ref = self.locals.get_ref(dest)?;
+                    let source_ref = locals.get_ref(source)?;
+                    let dest_ref = locals.get_ref(dest)?;
                     self.emit(&format!("movq {}, %rax", source_ref));
                     self.emit(&format!("movq %rax, {}", dest_ref));
                 }
@@ -110,16 +120,16 @@ impl AssemblyGenerator {
                     then_label,
                     else_label,
                 } => {
-                    let cond_ref = self.locals.get_ref(cond)?;
+                    let cond_ref = locals.get_ref(cond)?;
                     self.emit(&format!("cmpq $0, {}", cond_ref));
                     self.emit(&format!("jne .L{}", then_label.name));
                     self.emit(&format!("jmp .L{}", else_label.name));
                 }
                 ir::InstructionKind::Call { fun, args, dest } => {
-                    let dest_ref = self.locals.get_ref(dest)?;
+                    let dest_ref = locals.get_ref(dest)?;
                     let mut arg_refs = Vec::new();
                     for arg in args {
-                        arg_refs.push(self.locals.get_ref(arg)?);
+                        arg_refs.push(locals.get_ref(arg)?);
                     }
 
                     if let Some(intrinsic_fun) = self.all_intrinsics.get(&fun.name) {
@@ -144,17 +154,18 @@ impl AssemblyGenerator {
             self.emit("");
         }
 
+        self.emit("# Return(None)");
+        self.emit("movq $0, %rax");
         self.emit("movq %rbp, %rsp");
         self.emit("popq %rbp");
         self.emit("ret");
 
-        Ok(self.lines.join("\n") + "\n")
+        Ok(())
     }
 }
 
-pub fn generate_assembly(instructions: Vec<ir::Instruction>) -> Result<String, String> {
-    let mut assembly_generator = AssemblyGenerator::new(&instructions);
-    assembly_generator.generate(instructions)
+pub fn generate_assembly(function_irs: Vec<ir::FunctionIR>) -> Result<String, String> {
+    AssemblyGenerator::new().generate(function_irs)
 }
 
 mod intrinsics {
@@ -285,7 +296,10 @@ mod tests {
     use crate::compiler::ir_generator::tests::*;
 
     fn ga(instructions: Vec<ir::Instruction>) -> Result<String, String> {
-        generate_assembly(instructions)
+        generate_assembly(vec![ir::FunctionIR {
+            name: "main".to_string(),
+            instructions,
+        }])
     }
 
     fn assert_assembly_eq(left: String, right: String) {
