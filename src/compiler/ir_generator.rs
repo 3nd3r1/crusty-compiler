@@ -93,9 +93,33 @@ impl IrGenerator {
         &mut self,
         function: &mut ast::FunctionDeclaration,
     ) -> Result<ir::FunctionIR, String> {
+        self.symtab.borrow_mut().declare(
+            &function.name.clone(),
+            ir::IRVar {
+                name: function.name.clone(),
+            },
+        );
+        let old_symtab = Rc::clone(&self.symtab);
+        self.symtab = Rc::new(RefCell::new(IrSymTab {
+            locals: function
+                .params
+                .iter()
+                .map(|(p_name, _)| {
+                    (
+                        p_name.clone(),
+                        ir::IRVar {
+                            name: p_name.clone(),
+                        },
+                    )
+                })
+                .collect(),
+            parent: Some(Rc::clone(&self.symtab)),
+        }));
+
         self.instructions = Vec::new();
         self.visit(&mut function.body)?;
 
+        self.symtab = old_symtab;
         Ok(ir::FunctionIR {
             name: function.name.clone(),
             instructions: std::mem::take(&mut self.instructions),
@@ -330,7 +354,6 @@ impl IrGenerator {
                 Ok(self.unit_var())
             }
             ast::ExpressionKind::FunctionCall { name, arguments } => {
-                let var_dest = self.new_var();
                 let var_fun = self.symtab.borrow().lookup(&name)?;
 
                 let mut var_args: Vec<ir::IRVar> = Vec::new();
@@ -338,6 +361,7 @@ impl IrGenerator {
                     var_args.push(self.visit(argument)?);
                 }
 
+                let var_dest = self.new_var();
                 self.emit(ir::Instruction::call(
                     var_fun,
                     var_args,
@@ -347,7 +371,11 @@ impl IrGenerator {
 
                 Ok(var_dest)
             }
-            ast::ExpressionKind::Return { .. } => todo!(),
+            ast::ExpressionKind::Return { value } => {
+                let var_result = self.visit(&mut *value)?;
+                self.emit(ir::Instruction::ret(var_result.clone(), node.loc.clone()));
+                Ok(var_result)
+            }
         }
     }
 }
@@ -522,6 +550,15 @@ pub mod tests {
         )
     }
 
+    pub fn ireturn(value: &str) -> ir::Instruction {
+        ir::Instruction::ret(
+            ir::IRVar {
+                name: value.to_string(),
+            },
+            loc(),
+        )
+    }
+
     #[test]
     fn test_ir_generator_math() {
         assert_ir_eq(
@@ -578,11 +615,16 @@ pub mod tests {
     #[test]
     fn test_ir_generator_functions() {
         let mut module = emodule(vec![
-            efunction("foo", vec![("a", Type::Int)], eide("a"), Some(Type::Int)),
+            efunction(
+                "foo",
+                vec![("a", Type::Int)],
+                ereturn(eide("a")),
+                Some(Type::Int),
+            ),
             efunction(
                 "main",
                 vec![],
-                eblock(vec![ecall("foo", vec![eint(1)])]),
+                ewithtype(eblock(vec![ecall("foo", vec![eint(1)])]), Type::Int),
                 None,
             ),
         ]);
@@ -593,7 +635,7 @@ pub mod tests {
         assert_eq!(function_irs[0].name, "foo");
         assert_eq!(function_irs[1].name, "main");
 
-        assert_ir_eq(function_irs[0].instructions.clone(), vec![icopy("a", "x")]);
+        assert_ir_eq(function_irs[0].instructions.clone(), vec![ireturn("a")]);
         assert_ir_eq(
             function_irs[1].instructions.clone(),
             vec![
