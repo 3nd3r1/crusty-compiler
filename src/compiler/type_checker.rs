@@ -11,13 +11,33 @@ pub fn typecheck(module: &mut ast::Module) -> Result<Type, String> {
             parent: None,
         }));
         for function in functions {
-            let return_type = typecheck_node(&mut *function.body, &root_symtab)?;
-            root_symtab
-                .borrow_mut()
-                .declare(&function.name, return_type.clone());
-            function.return_type = Some(return_type);
+            root_symtab.borrow_mut().declare(
+                &function.name,
+                Type::Function {
+                    params: function
+                        .params
+                        .iter()
+                        .map(|(_, p_type)| p_type.clone())
+                        .collect(),
+                    return_type: Box::new(function.return_type.clone()),
+                },
+            );
+            let func_symtab = Rc::new(RefCell::new(TypeSymTab {
+                locals: function
+                    .params
+                    .iter()
+                    .map(|(p_name, p_type)| (p_name.clone(), p_type.clone()))
+                    .collect(),
+                parent: Some(Rc::clone(&root_symtab)),
+            }));
+
+            typecheck_node(
+                &mut *function.body,
+                &func_symtab,
+                Some(&function.return_type),
+            )?;
         }
-        typecheck_node(&mut *main.body, &root_symtab)
+        typecheck_node(&mut *main.body, &root_symtab, None)
     } else {
         Err("module must contain at least a main function".to_string())
     }
@@ -26,6 +46,7 @@ pub fn typecheck(module: &mut ast::Module) -> Result<Type, String> {
 fn typecheck_node(
     node: &mut ast::Expression,
     symtab: &Rc<RefCell<TypeSymTab>>,
+    return_type: Option<&Type>,
 ) -> Result<Type, String> {
     let return_type = match &mut node.kind {
         ast::ExpressionKind::NoneLiteral { .. } => Ok(Type::Unit),
@@ -33,8 +54,8 @@ fn typecheck_node(
         ast::ExpressionKind::BoolLiteral { .. } => Ok(Type::Bool),
         ast::ExpressionKind::Identifier { value } => symtab.borrow().lookup(value),
         ast::ExpressionKind::BinaryOp { left, right, op } => {
-            let left_type = typecheck_node(&mut *left, symtab)?;
-            let right_type = typecheck_node(&mut *right, symtab)?;
+            let left_type = typecheck_node(&mut *left, symtab, return_type)?;
+            let right_type = typecheck_node(&mut *right, symtab, return_type)?;
 
             match &op {
                 ast::Operation::Equal | ast::Operation::NotEqual => {
@@ -78,7 +99,7 @@ fn typecheck_node(
             }
         }
         ast::ExpressionKind::UnaryOp { operand, op } => {
-            let operand_type = typecheck_node(&mut *operand, symtab)?;
+            let operand_type = typecheck_node(&mut *operand, symtab, return_type)?;
 
             let identifier = format!("unary_{}", op);
             let func = symtab.borrow().lookup(&identifier)?;
@@ -111,16 +132,16 @@ fn typecheck_node(
             then_expression,
             else_expression,
         } => {
-            let condition_type = typecheck_node(&mut *condition, symtab)?;
+            let condition_type = typecheck_node(&mut *condition, symtab, return_type)?;
             if condition_type != Type::Bool {
                 Err(format!(
                     "{}: expected condition to be of type bool got {}",
                     node.loc, condition_type
                 ))
             } else {
-                let then_type = typecheck_node(&mut *then_expression, symtab)?;
+                let then_type = typecheck_node(&mut *then_expression, symtab, return_type)?;
                 if let Some(else_expression) = else_expression {
-                    let else_type = typecheck_node(&mut *else_expression, symtab)?;
+                    let else_type = typecheck_node(&mut *else_expression, symtab, return_type)?;
 
                     if then_type != else_type {
                         return Err(format!(
@@ -137,7 +158,7 @@ fn typecheck_node(
             value,
             value_type,
         } => {
-            let actual_value_type = typecheck_node(&mut *value, symtab)?;
+            let actual_value_type = typecheck_node(&mut *value, symtab, return_type)?;
             if let Some(value_type) = value_type {
                 if actual_value_type != **value_type {
                     return Err(format!(
@@ -154,7 +175,7 @@ fn typecheck_node(
             Ok(Type::Unit)
         }
         ast::ExpressionKind::Assignment { name, right } => {
-            let value_type = typecheck_node(&mut *right, symtab)?;
+            let value_type = typecheck_node(&mut *right, symtab, return_type)?;
             symtab.borrow_mut().assign(name, value_type.clone())?;
             Ok(value_type)
         }
@@ -166,9 +187,9 @@ fn typecheck_node(
 
             if let Some((last, expressions)) = expressions.split_last_mut() {
                 for expression in expressions {
-                    typecheck_node(expression, &block_symtab)?;
+                    typecheck_node(expression, &block_symtab, return_type)?;
                 }
-                typecheck_node(last, &block_symtab)
+                typecheck_node(last, &block_symtab, return_type)
             } else {
                 Ok(Type::Unit)
             }
@@ -177,7 +198,7 @@ fn typecheck_node(
             condition,
             do_expression: _,
         } => {
-            let condition_type = typecheck_node(&mut *condition, symtab)?;
+            let condition_type = typecheck_node(&mut *condition, symtab, return_type)?;
             if condition_type != Type::Bool {
                 Err(format!(
                     "{}: expected condition to be of type {} got {}",
@@ -194,7 +215,7 @@ fn typecheck_node(
 
             if let Type::Function {
                 params,
-                return_type,
+                return_type: func_return_type,
             } = func_type
             {
                 if arguments.len() != params.len() {
@@ -207,7 +228,7 @@ fn typecheck_node(
                     ))
                 } else {
                     for (param_type, argument) in params.iter().zip(arguments.iter_mut()) {
-                        let argument_type = typecheck_node(argument, symtab)?;
+                        let argument_type = typecheck_node(argument, symtab, return_type)?;
                         if argument_type != *param_type {
                             return Err(format!(
                                 "{}: Function {} expected argument to be of type {}, got {}",
@@ -215,7 +236,7 @@ fn typecheck_node(
                             ));
                         }
                     }
-                    Ok(*return_type)
+                    Ok(*func_return_type)
                 }
             } else {
                 Err(format!(
@@ -224,7 +245,24 @@ fn typecheck_node(
                 ))
             }
         }
-        ast::ExpressionKind::Return { .. } => todo!(),
+        ast::ExpressionKind::Return { value } => {
+            let value_type = typecheck_node(&mut *value, symtab, return_type)?;
+            if let Some(return_type) = return_type {
+                if &value_type != return_type {
+                    Err(format!(
+                        "{}: expected return type to be {}, got {}",
+                        node.loc, return_type, value_type
+                    ))
+                } else {
+                    Ok(value_type)
+                }
+            } else {
+                Err(format!(
+                    "{}: return statement not allowed outside of function",
+                    node.loc
+                ))
+            }
+        }
     }?;
 
     node.return_type = Some(return_type.clone());
@@ -378,7 +416,12 @@ mod tests {
     #[test]
     fn test_typechecker_function_declaration() {
         let mut module = emodule(vec![
-            efunction("foo", vec![("a", Type::Int)], eide("a"), Some(Type::Int)),
+            efunction(
+                "foo",
+                vec![("a", Type::Int)],
+                ereturn(eide("a")),
+                Some(Type::Int),
+            ),
             efunction(
                 "main",
                 vec![],
