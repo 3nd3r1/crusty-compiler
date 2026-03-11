@@ -399,13 +399,7 @@ pub mod tests {
         return_type: Option<Type>,
     ) -> Result<Vec<ir::Instruction>, String> {
         node.return_type = return_type.or_else(|| Some(Type::Unit));
-        let mut module = ast::Module {
-            functions: vec![ast::FunctionDeclaration {
-                name: "main".to_string(),
-                body: Box::new(node),
-                return_type: None,
-            }],
-        };
+        let mut module = emodule(vec![efunction("main", vec![], node, None)]);
         generate_ir(&mut module).map(|functions| functions.into_iter().last().unwrap().instructions)
     }
 
@@ -576,6 +570,35 @@ pub mod tests {
                 ilic(2, "x3"),
                 icopy("x3", "x2"),
                 iprint_int("x2", "x4"),
+            ],
+        );
+    }
+
+    #[test]
+    fn test_ir_generator_functions() {
+        let mut module = emodule(vec![
+            efunction("foo", vec![("a", Type::Int)], eide("a"), Some(Type::Int)),
+            efunction(
+                "main",
+                vec![],
+                eblock(vec![ecall("foo", vec![eint(1)])]),
+                None,
+            ),
+        ]);
+
+        let function_irs = generate_ir(&mut module).unwrap();
+
+        assert_eq!(function_irs.len(), 2);
+        assert_eq!(function_irs[0].name, "foo");
+        assert_eq!(function_irs[1].name, "main");
+
+        assert_ir_eq(function_irs[0].instructions.clone(), vec![icopy("a", "x")]);
+        assert_ir_eq(
+            function_irs[1].instructions.clone(),
+            vec![
+                ilic(1, "x"),
+                icall("foo", vec!["x"], "x2"),
+                iprint_int("x2", "x3"),
             ],
         );
     }
