@@ -110,6 +110,9 @@ pub enum ExpressionKind {
         value: Box<Expression>,
         value_type: Option<Box<Type>>,
     },
+    Return {
+        value: Box<Expression>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
