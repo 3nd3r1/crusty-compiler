@@ -51,9 +51,9 @@ impl IrGenerator {
         }
     }
 
-    fn unit_var(&mut self) -> ir::IRVar {
+    fn unit_var(&self) -> ir::IRVar {
         ir::IRVar {
-            name: "unit".to_string(),
+            name: "None".to_string(),
         }
     }
 
@@ -79,6 +79,7 @@ impl IrGenerator {
                     main.body.loc.clone(),
                 ));
             }
+            self.emit(ir::Instruction::ret(self.unit_var(), main.body.loc.clone()));
             function_irs.push(ir::FunctionIR {
                 name: main.name.clone(),
                 instructions: std::mem::take(&mut self.instructions),
@@ -570,6 +571,7 @@ pub mod tests {
                 imul("x2", "x3", "x4"),
                 iadd("x", "x4", "x5"),
                 iprint_int("x5", "x6"),
+                ireturn("None"),
             ],
         );
     }
@@ -590,6 +592,7 @@ pub mod tests {
                 icopy("x4", "x2"),
                 ilabel("label3"),
                 iprint_int("x2", "x5"),
+                ireturn("None"),
             ],
         );
     }
@@ -608,6 +611,7 @@ pub mod tests {
                 ilic(2, "x3"),
                 icopy("x3", "x2"),
                 iprint_int("x2", "x4"),
+                ireturn("None"),
             ],
         );
     }
@@ -642,6 +646,7 @@ pub mod tests {
                 ilic(1, "x"),
                 icall("foo", vec!["x"], "x2"),
                 iprint_int("x2", "x3"),
+                ireturn("None"),
             ],
         );
     }
@@ -665,6 +670,7 @@ pub mod tests {
                 ilabel("label"),
                 ilic(1, "x4"),
                 ilabel("label2"),
+                ireturn("None"),
             ],
         );
     }
