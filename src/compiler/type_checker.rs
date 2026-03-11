@@ -308,13 +308,7 @@ mod tests {
     use crate::compiler::parser::tests::*;
 
     fn tc(node: ast::Expression) -> Result<Type, String> {
-        let mut module = ast::Module {
-            functions: vec![ast::FunctionDeclaration {
-                name: "main".to_string(),
-                return_type: None,
-                body: Box::new(node),
-            }],
-        };
+        let mut module = emodule(vec![efunction("main", vec![], node, None)]);
         typecheck(&mut module)
     }
 
@@ -381,6 +375,20 @@ mod tests {
     }
 
     #[test]
+    fn test_typechecker_function_declaration() {
+        let mut module = emodule(vec![
+            efunction("foo", vec![("a", Type::Int)], eide("a"), Some(Type::Int)),
+            efunction(
+                "main",
+                vec![],
+                eblock(vec![ecall("foo", vec![eint(1)])]),
+                None,
+            ),
+        ]);
+        assert_eq!(typecheck(&mut module).unwrap(), Type::Int);
+    }
+
+    #[test]
     fn test_typechecker_while() {
         assert_eq!(
             tc(eblock(vec![
@@ -398,13 +406,7 @@ mod tests {
 
     #[test]
     fn test_typechecker_expression_types() {
-        let mut module = ast::Module {
-            functions: vec![ast::FunctionDeclaration {
-                name: "main".to_string(),
-                return_type: None,
-                body: Box::new(eadd(eint(2), eint(3))),
-            }],
-        };
+        let mut module = emain(vec![eadd(eint(2), eint(3))]);
 
         let result = typecheck(&mut module).unwrap();
         assert_eq!(result, Type::Int);
