@@ -79,7 +79,7 @@ impl IrGenerator {
                     main.body.loc.clone(),
                 ));
             }
-            self.emit(ir::Instruction::ret(self.unit_var(), main.body.loc.clone()));
+            self.emit(ir::Instruction::ret(None, main.body.loc.clone()));
             function_irs.push(ir::FunctionIR {
                 name: main.name.clone(),
                 instructions: std::mem::take(&mut self.instructions),
@@ -374,7 +374,10 @@ impl IrGenerator {
             }
             ast::ExpressionKind::Return { value } => {
                 let var_result = self.visit(&mut *value)?;
-                self.emit(ir::Instruction::ret(var_result.clone(), node.loc.clone()));
+                self.emit(ir::Instruction::ret(
+                    Some(var_result.clone()),
+                    node.loc.clone(),
+                ));
                 Ok(var_result)
             }
         }
@@ -551,13 +554,17 @@ pub mod tests {
         )
     }
 
-    pub fn ireturn(value: &str) -> ir::Instruction {
-        ir::Instruction::ret(
-            ir::IRVar {
-                name: value.to_string(),
-            },
-            loc(),
-        )
+    pub fn ireturn(value: Option<&str>) -> ir::Instruction {
+        if let Some(value) = value {
+            ir::Instruction::ret(
+                Some(ir::IRVar {
+                    name: value.to_string(),
+                }),
+                loc(),
+            )
+        } else {
+            ir::Instruction::ret(None, loc())
+        }
     }
 
     #[test]
@@ -571,7 +578,7 @@ pub mod tests {
                 imul("x2", "x3", "x4"),
                 iadd("x", "x4", "x5"),
                 iprint_int("x5", "x6"),
-                ireturn("None"),
+                ireturn(None),
             ],
         );
     }
@@ -592,7 +599,7 @@ pub mod tests {
                 icopy("x4", "x2"),
                 ilabel("label3"),
                 iprint_int("x2", "x5"),
-                ireturn("None"),
+                ireturn(None),
             ],
         );
     }
@@ -611,7 +618,7 @@ pub mod tests {
                 ilic(2, "x3"),
                 icopy("x3", "x2"),
                 iprint_int("x2", "x4"),
-                ireturn("None"),
+                ireturn(None),
             ],
         );
     }
@@ -639,14 +646,14 @@ pub mod tests {
         assert_eq!(function_irs[0].name, "foo");
         assert_eq!(function_irs[1].name, "main");
 
-        assert_ir_eq(function_irs[0].instructions.clone(), vec![ireturn("a")]);
+        assert_ir_eq(function_irs[0].instructions.clone(), vec![ireturn(Some("a"))]);
         assert_ir_eq(
             function_irs[1].instructions.clone(),
             vec![
                 ilic(1, "x"),
                 icall("foo", vec!["x"], "x2"),
                 iprint_int("x2", "x3"),
-                ireturn("None"),
+                ireturn(None),
             ],
         );
     }
@@ -670,7 +677,7 @@ pub mod tests {
                 ilabel("label"),
                 ilic(1, "x4"),
                 ilabel("label2"),
-                ireturn("None"),
+                ireturn(None),
             ],
         );
     }
