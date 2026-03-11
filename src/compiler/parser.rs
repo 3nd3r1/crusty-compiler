@@ -82,6 +82,7 @@ impl Parser {
         Ok(ast::Module {
             functions: vec![ast::FunctionDeclaration {
                 name: "main".to_string(),
+                params: vec![],
                 body: Box::new(ast::Expression {
                     loc: loc.clone(),
                     kind: ast::ExpressionKind::Block { expressions },
