@@ -47,7 +47,7 @@ pub enum InstructionKind {
         label: Label,
     },
     Return {
-        value: IRVar,
+        value: Option<IRVar>,
     },
 }
 
@@ -104,7 +104,7 @@ impl Instruction {
         }
     }
 
-    pub fn ret(value: IRVar, location: Location) -> Self {
+    pub fn ret(value: Option<IRVar>, location: Location) -> Self {
         Instruction {
             kind: InstructionKind::Return { value },
             location,
@@ -124,6 +124,13 @@ impl Instruction {
                 ret
             }
             InstructionKind::CondJump { cond, .. } => vec![cond.clone()],
+            InstructionKind::Return { value } => {
+                if let Some(value) = value {
+                    vec![value.clone()]
+                } else {
+                    Vec::new()
+                }
+            }
             _ => Vec::new(),
         }
     }
@@ -175,7 +182,11 @@ impl std::fmt::Display for Instruction {
                 write!(f, "Label({})", label)
             }
             InstructionKind::Return { value } => {
-                write!(f, "Return({})", value)
+                if let Some(value) = value {
+                    write!(f, "Return({})", value)
+                } else {
+                    write!(f, "Return(None)")
+                }
             }
         }
     }
