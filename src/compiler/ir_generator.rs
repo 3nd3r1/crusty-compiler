@@ -5,7 +5,7 @@ use crate::compiler::{ast, common::SymTab, ir, types::Type};
 type IrSymTab = SymTab<ir::IRVar>;
 
 struct IrGenerator {
-    ins: Vec<ir::Instruction>,
+    instructions: Vec<ir::Instruction>,
     symtab: Rc<RefCell<IrSymTab>>,
     var_counter: u32,
     label_counter: u32,
@@ -14,11 +14,15 @@ struct IrGenerator {
 impl IrGenerator {
     fn new(root_symtab: IrSymTab) -> Self {
         IrGenerator {
-            ins: Vec::new(),
+            instructions: Vec::new(),
             symtab: Rc::new(RefCell::new(root_symtab)),
             var_counter: 0,
             label_counter: 0,
         }
+    }
+
+    fn emit(&mut self, ins: ir::Instruction) {
+        self.instructions.push(ins);
     }
 
     fn new_var(&mut self) -> ir::IRVar {
@@ -53,27 +57,49 @@ impl IrGenerator {
         }
     }
 
-    fn generate(&mut self, node: &mut ast::Expression) -> Result<Vec<ir::Instruction>, String> {
-        let result = self.visit(node)?;
-
-        let print_fn = match &node.return_type {
-            Some(Type::Int) => Some("print_int"),
-            Some(Type::Bool) => Some("print_bool"),
-            _ => None,
-        };
-
-        if let Some(print_fn) = print_fn {
-            let var_fun = self.symtab.borrow().lookup(print_fn)?;
-            let var_result = self.new_var();
-            self.ins.push(ir::Instruction::call(
-                var_fun,
-                vec![result],
-                var_result,
-                node.loc.clone(),
-            ));
+    fn generate(&mut self, module: &mut ast::Module) -> Result<Vec<ir::FunctionIR>, String> {
+        let mut function_irs = Vec::new();
+        if let Some((main, functions)) = module.functions.split_last_mut() {
+            for function in functions {
+                function_irs.push(self.generate_function(function)?);
+            }
+            self.instructions = Vec::new();
+            let var_main_result = self.visit(&mut main.body)?;
+            if let Some(print_fn) = match &main.body.return_type {
+                Some(Type::Int) => Some("print_int"),
+                Some(Type::Bool) => Some("print_bool"),
+                _ => None,
+            } {
+                let var_print_fn = self.symtab.borrow().lookup(print_fn)?;
+                let var_result = self.new_var();
+                self.emit(ir::Instruction::call(
+                    var_print_fn,
+                    vec![var_main_result],
+                    var_result,
+                    main.body.loc.clone(),
+                ));
+            }
+            function_irs.push(ir::FunctionIR {
+                name: main.name.clone(),
+                instructions: std::mem::take(&mut self.instructions),
+            });
+        } else {
+            return Err("module must contain at least one function".to_string());
         }
+        Ok(function_irs)
+    }
 
-        Ok(self.ins.clone())
+    fn generate_function(
+        &mut self,
+        function: &mut ast::FunctionDeclaration,
+    ) -> Result<ir::FunctionIR, String> {
+        self.instructions = Vec::new();
+        self.visit(&mut function.body)?;
+
+        Ok(ir::FunctionIR {
+            name: function.name.clone(),
+            instructions: std::mem::take(&mut self.instructions),
+        })
     }
 
     fn visit(&mut self, node: &mut ast::Expression) -> Result<ir::IRVar, String> {
@@ -81,7 +107,7 @@ impl IrGenerator {
             ast::ExpressionKind::NoneLiteral { .. } => Ok(self.unit_var()),
             ast::ExpressionKind::IntLiteral { value } => {
                 let var = self.new_var();
-                self.ins.push(ir::Instruction::load_int_const(
+                self.emit(ir::Instruction::load_int_const(
                     value.clone(),
                     var.clone(),
                     node.loc.clone(),
@@ -90,7 +116,7 @@ impl IrGenerator {
             }
             ast::ExpressionKind::BoolLiteral { value } => {
                 let var = self.new_var();
-                self.ins.push(ir::Instruction::load_bool_const(
+                self.emit(ir::Instruction::load_bool_const(
                     value.clone(),
                     var.clone(),
                     node.loc.clone(),
@@ -106,14 +132,14 @@ impl IrGenerator {
                         let l_skip = self.new_label();
                         let l_end = self.new_label();
                         if matches!(op, ast::Operation::Or) {
-                            self.ins.push(ir::Instruction::cond_jump(
+                            self.emit(ir::Instruction::cond_jump(
                                 var_left.clone(),
                                 l_skip.clone(),
                                 l_right.clone(),
                                 node.loc.clone(),
                             ));
                         } else {
-                            self.ins.push(ir::Instruction::cond_jump(
+                            self.emit(ir::Instruction::cond_jump(
                                 var_left.clone(),
                                 l_right.clone(),
                                 l_skip.clone(),
@@ -121,30 +147,25 @@ impl IrGenerator {
                             ));
                         }
 
-                        self.ins
-                            .push(ir::Instruction::label(l_right, node.loc.clone()));
+                        self.emit(ir::Instruction::label(l_right, node.loc.clone()));
                         let var_right = self.visit(right)?;
                         let var_result = self.new_var();
-                        self.ins.push(ir::Instruction::copy(
+                        self.emit(ir::Instruction::copy(
                             var_right,
                             var_result.clone(),
                             node.loc.clone(),
                         ));
-                        self.ins
-                            .push(ir::Instruction::jump(l_end.clone(), node.loc.clone()));
+                        self.emit(ir::Instruction::jump(l_end.clone(), node.loc.clone()));
 
-                        self.ins
-                            .push(ir::Instruction::label(l_skip, node.loc.clone()));
-                        self.ins.push(ir::Instruction::load_bool_const(
+                        self.emit(ir::Instruction::label(l_skip, node.loc.clone()));
+                        self.emit(ir::Instruction::load_bool_const(
                             matches!(op, ast::Operation::Or),
                             var_result.clone(),
                             node.loc.clone(),
                         ));
-                        self.ins
-                            .push(ir::Instruction::jump(l_end.clone(), node.loc.clone()));
+                        self.emit(ir::Instruction::jump(l_end.clone(), node.loc.clone()));
 
-                        self.ins
-                            .push(ir::Instruction::label(l_end, node.loc.clone()));
+                        self.emit(ir::Instruction::label(l_end, node.loc.clone()));
 
                         Ok(var_result)
                     }
@@ -152,7 +173,7 @@ impl IrGenerator {
                         let var_fun = self.symtab.borrow().lookup(&op.to_string())?;
                         let var_right = self.visit(right)?;
                         let var_result = self.new_var();
-                        self.ins.push(ir::Instruction::call(
+                        self.emit(ir::Instruction::call(
                             var_fun,
                             vec![var_left, var_right],
                             var_result.clone(),
@@ -166,7 +187,7 @@ impl IrGenerator {
                 let var_op = self.symtab.borrow().lookup(&format!("unary_{}", op))?;
                 let var_operand = self.visit(operand)?;
                 let var_result = self.new_var();
-                self.ins.push(ir::Instruction::call(
+                self.emit(ir::Instruction::call(
                     var_op,
                     vec![var_operand],
                     var_result.clone(),
@@ -186,38 +207,34 @@ impl IrGenerator {
                     let var_cond = self.visit(&mut *condition)?;
                     let var_result = self.new_var();
 
-                    self.ins.push(ir::Instruction::cond_jump(
+                    self.emit(ir::Instruction::cond_jump(
                         var_cond,
                         l_then.clone(),
                         l_else.clone(),
                         node.loc.clone(),
                     ));
 
-                    self.ins
-                        .push(ir::Instruction::label(l_then, node.loc.clone()));
+                    self.emit(ir::Instruction::label(l_then, node.loc.clone()));
 
                     let var_then_result = self.visit(&mut *then_expression)?;
-                    self.ins.push(ir::Instruction::copy(
+                    self.emit(ir::Instruction::copy(
                         var_then_result,
                         var_result.clone(),
                         node.loc.clone(),
                     ));
 
-                    self.ins
-                        .push(ir::Instruction::jump(l_end.clone(), node.loc.clone()));
+                    self.emit(ir::Instruction::jump(l_end.clone(), node.loc.clone()));
 
-                    self.ins
-                        .push(ir::Instruction::label(l_else, node.loc.clone()));
+                    self.emit(ir::Instruction::label(l_else, node.loc.clone()));
 
                     let var_else_result = self.visit(&mut *else_expression)?;
-                    self.ins.push(ir::Instruction::copy(
+                    self.emit(ir::Instruction::copy(
                         var_else_result,
                         var_result.clone(),
                         node.loc.clone(),
                     ));
 
-                    self.ins
-                        .push(ir::Instruction::label(l_end, node.loc.clone()));
+                    self.emit(ir::Instruction::label(l_end, node.loc.clone()));
 
                     Ok(var_result)
                 } else {
@@ -225,20 +242,18 @@ impl IrGenerator {
                     let l_end = self.new_label();
                     let var_cond = self.visit(&mut *condition)?;
 
-                    self.ins.push(ir::Instruction::cond_jump(
+                    self.emit(ir::Instruction::cond_jump(
                         var_cond,
                         l_then.clone(),
                         l_end.clone(),
                         node.loc.clone(),
                     ));
 
-                    self.ins
-                        .push(ir::Instruction::label(l_then, node.loc.clone()));
+                    self.emit(ir::Instruction::label(l_then, node.loc.clone()));
 
                     self.visit(&mut *then_expression)?;
 
-                    self.ins
-                        .push(ir::Instruction::label(l_end, node.loc.clone()));
+                    self.emit(ir::Instruction::label(l_end, node.loc.clone()));
 
                     Ok(self.unit_var())
                 }
@@ -248,7 +263,7 @@ impl IrGenerator {
                 let var_var = self.new_var();
 
                 self.symtab.borrow_mut().declare(name, var_var.clone());
-                self.ins.push(ir::Instruction::copy(
+                self.emit(ir::Instruction::copy(
                     var_value,
                     var_var.clone(),
                     node.loc.clone(),
@@ -259,7 +274,7 @@ impl IrGenerator {
             ast::ExpressionKind::Assignment { name, right } => {
                 let var_right = self.visit(&mut *right)?;
                 let var_var = self.symtab.borrow().lookup(&name)?;
-                self.ins.push(ir::Instruction::copy(
+                self.emit(ir::Instruction::copy(
                     var_right,
                     var_var.clone(),
                     node.loc.clone(),
@@ -294,27 +309,23 @@ impl IrGenerator {
                 let l_do = self.new_label();
                 let l_end = self.new_label();
 
-                self.ins
-                    .push(ir::Instruction::label(l_start.clone(), node.loc.clone()));
+                self.emit(ir::Instruction::label(l_start.clone(), node.loc.clone()));
 
                 let var_cond = self.visit(&mut *condition)?;
 
-                self.ins.push(ir::Instruction::cond_jump(
+                self.emit(ir::Instruction::cond_jump(
                     var_cond,
                     l_do.clone(),
                     l_end.clone(),
                     node.loc.clone(),
                 ));
-                self.ins
-                    .push(ir::Instruction::label(l_do, node.loc.clone()));
+                self.emit(ir::Instruction::label(l_do, node.loc.clone()));
 
                 self.visit(&mut *do_expression)?;
 
-                self.ins
-                    .push(ir::Instruction::jump(l_start.clone(), node.loc.clone()));
+                self.emit(ir::Instruction::jump(l_start.clone(), node.loc.clone()));
 
-                self.ins
-                    .push(ir::Instruction::label(l_end, node.loc.clone()));
+                self.emit(ir::Instruction::label(l_end, node.loc.clone()));
 
                 Ok(self.unit_var())
             }
@@ -327,7 +338,7 @@ impl IrGenerator {
                     var_args.push(self.visit(argument)?);
                 }
 
-                self.ins.push(ir::Instruction::call(
+                self.emit(ir::Instruction::call(
                     var_fun,
                     var_args,
                     var_dest.clone(),
@@ -336,15 +347,11 @@ impl IrGenerator {
 
                 Ok(var_dest)
             }
-            ast::ExpressionKind::FunctionDeclaration { .. } => {
-                Err(format!("{}: FunctionDeclaration not implemented", node.loc))
-            }
-            ast::ExpressionKind::Module { body, .. } => self.visit(&mut *body),
         }
     }
 }
 
-pub fn generate_ir(root_expr: &mut ast::Expression) -> Result<Vec<ir::Instruction>, String> {
+pub fn generate_ir(module: &mut ast::Module) -> Result<Vec<ir::FunctionIR>, String> {
     use ast::Operation::*;
     use ast::UnaryOperation::*;
 
@@ -378,8 +385,7 @@ pub fn generate_ir(root_expr: &mut ast::Expression) -> Result<Vec<ir::Instructio
         root_symtab.declare(&name, ir::IRVar { name: name.clone() });
     }
 
-    let mut ir_generator = IrGenerator::new(root_symtab);
-    ir_generator.generate(root_expr)
+    IrGenerator::new(root_symtab).generate(module)
 }
 
 #[cfg(test)]
@@ -393,7 +399,14 @@ pub mod tests {
         return_type: Option<Type>,
     ) -> Result<Vec<ir::Instruction>, String> {
         node.return_type = return_type.or_else(|| Some(Type::Unit));
-        generate_ir(&mut node)
+        let mut module = ast::Module {
+            functions: vec![ast::FunctionDeclaration {
+                name: "main".to_string(),
+                body: Box::new(node),
+                return_type: None,
+            }],
+        };
+        generate_ir(&mut module).map(|functions| functions.into_iter().last().unwrap().instructions)
     }
 
     fn assert_ir_eq(left: Vec<ir::Instruction>, right: Vec<ir::Instruction>) {
