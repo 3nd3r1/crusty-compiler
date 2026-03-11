@@ -125,5 +125,5 @@ pub struct FunctionDeclaration {
     pub name: String,
     pub params: Vec<(String, Type)>,
     pub body: Box<Expression>,
-    pub return_type: Option<Type>,
+    pub return_type: Type,
 }
