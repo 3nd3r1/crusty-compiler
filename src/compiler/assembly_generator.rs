@@ -306,27 +306,42 @@ mod tests {
         pretty_assertions::assert_eq!(left, right);
     }
 
-    fn make_asm(stack_used: u32, body: &str) -> String {
+    fn make_fn(name: &str, stack_used: u32, body: &str, return_body: Option<&str>) -> String {
+        let return_body = return_body.unwrap_or_else(|| {
+            "# Return(None)\n\
+             movq $0, %rax\n\
+             movq %rbp, %rsp\n\
+             popq %rbp\n\
+             ret"
+        });
+        format!(
+            "# {}()\n\
+             .global {}\n\
+             .type {}, @function\n\
+             {}:\n\
+             pushq %rbp\n\
+             movq %rsp, %rbp\n\
+             subq ${}, %rsp\n\
+             {}\n\
+             {}\n\
+            ",
+            name, name, name, name, stack_used, body, return_body
+        )
+    }
+
+    fn make_asm(body: &str) -> String {
         format!(
             ".extern print_int\n\
              .extern print_bool\n\
              .extern read_int\n\
              .section .text\n\
-             # main()\n\
-             .global main\n\
-             .type main, @function\n\
-             main:\n\
-             pushq %rbp\n\
-             movq %rsp, %rbp\n\
-             subq ${}, %rsp\n\
-             {}\n\
-             # Return(None)\n\
-             movq $0, %rax\n\
-             movq %rbp, %rsp\n\
-             popq %rbp\n\
-             ret\n",
-            stack_used, body
+             {}",
+            body
         )
+    }
+
+    fn make_main(stack_used: u32, body: &str) -> String {
+        make_asm(&make_fn("main", stack_used, body, None))
     }
 
     #[test]
@@ -346,7 +361,7 @@ mod tests {
                 iprint_int("x2", "x5"),
             ])
             .unwrap(),
-            make_asm(
+            make_main(
                 40,
                 "# LoadBoolConst(true, x)\n\
                  movq $1, -8(%rbp)\n\
@@ -392,10 +407,64 @@ mod tests {
     }
 
     #[test]
+    fn test_assembly_generator_functions() {
+        assert_assembly_eq(
+            generate_assembly(vec![
+                ir::FunctionIR {
+                    name: "foo".to_string(),
+                    instructions: vec![icopy("a", "x")],
+                },
+                ir::FunctionIR {
+                    name: "main".to_string(),
+                    instructions: vec![
+                        ilic(1, "x"),
+                        icall("foo", vec!["x"], "x2"),
+                        iprint_int("x2", "x3"),
+                    ],
+                },
+            ])
+            .unwrap(),
+            make_asm(&format!(
+                "{}{}",
+                make_fn(
+                    "foo",
+                    8,
+                    "",
+                    Some(
+                        "# Return(a)\n\
+                     movq -8(%rbp), %rax\n\
+                     movq %rbp, %rsp\n\
+                     popq %rbp\n\
+                     ret"
+                    )
+                ),
+                make_fn(
+                    "main",
+                    24,
+                    "# LoadIntConst(1, x)\n\
+                     movq $1, -8(%rbp)\n\
+                     \n\
+                     # Call(foo, [x], x2)\n\
+                     movq -8(%rbp), %rdi\n\
+                     callq foo\n\
+                     movq %rax, -16(%rbp)\n\
+                     \n\
+                     # Call(print_int, [x2], x3)\n\
+                     movq -16(%rbp), %rdi\n\
+                     callq print_int\n\
+                     movq %rax, -24(%rbp)\n\
+                     ",
+                    None
+                )
+            )),
+        );
+    }
+
+    #[test]
     fn test_assembly_generator_call() {
         assert_assembly_eq(
             ga(vec![ilic(42, "a"), icall("my_func", vec!["a"], "res")]).unwrap(),
-            make_asm(
+            make_main(
                 16,
                 "# LoadIntConst(42, a)\n\
                  movq $42, -8(%rbp)\n\
