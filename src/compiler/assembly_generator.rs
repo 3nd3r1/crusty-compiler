@@ -79,7 +79,7 @@ impl AssemblyGenerator {
     fn generate_function(&mut self, function_ir: &ir::FunctionIR) -> Result<(), String> {
         let locals = Locals::from_instructions(&function_ir.instructions);
 
-        self.emit(&format!("# {}", function_ir.name));
+        self.emit(&format!("# {}()", function_ir.name));
         self.emit(&format!(".global {}", function_ir.name));
         self.emit(&format!(".type {}, @function", function_ir.name));
         self.emit(&format!("{}:", function_ir.name));
@@ -311,14 +311,17 @@ mod tests {
             ".extern print_int\n\
              .extern print_bool\n\
              .extern read_int\n\
+             .section .text\n\
+             # main()\n\
              .global main\n\
              .type main, @function\n\
-             .section .text\n\
              main:\n\
              pushq %rbp\n\
              movq %rsp, %rbp\n\
              subq ${}, %rsp\n\
              {}\n\
+             # Return(None)\n\
+             movq $0, %rax\n\
              movq %rbp, %rsp\n\
              popq %rbp\n\
              ret\n",
