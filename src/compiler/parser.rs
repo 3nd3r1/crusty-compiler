@@ -43,10 +43,15 @@ impl Parser {
     }
 
     fn parse(&mut self) -> Result<ast::Module, String> {
-        let mut expressions = vec![];
+        let mut functions: Vec<ast::FunctionDeclaration> = Vec::new();
+        let mut expressions: Vec<ast::Expression> = Vec::new();
+
+        while self.peek().text == "fun" {
+            functions.push(self.parse_function_declaration()?);
+        }
 
         while self.peek().kind != TokenKind::End {
-            if self.peek().kind == TokenKind::Keyword && self.peek().text.as_str() == "var" {
+            if self.peek().text == "var" {
                 expressions.push(self.parse_var_declaration()?);
             } else {
                 expressions.push(self.parse_expression()?);
@@ -78,18 +83,55 @@ impl Parser {
             ));
         }
 
-        let loc = self.peek().loc.clone();
-        Ok(ast::Module {
-            functions: vec![ast::FunctionDeclaration {
-                name: "main".to_string(),
-                params: vec![],
-                body: Box::new(ast::Expression {
-                    loc: loc.clone(),
-                    kind: ast::ExpressionKind::Block { expressions },
-                    return_type: None,
-                }),
+        functions.push(ast::FunctionDeclaration {
+            name: "main".to_string(),
+            params: vec![],
+            body: Box::new(ast::Expression {
+                loc: self.peek().loc.clone(),
+                kind: ast::ExpressionKind::Block { expressions },
                 return_type: None,
-            }],
+            }),
+            return_type: None,
+        });
+
+        Ok(ast::Module { functions })
+    }
+
+    fn parse_function_declaration(&mut self) -> Result<ast::FunctionDeclaration, String> {
+        self.consume(TokenKind::Keyword, Some("fun"))?;
+        let name = self.consume(TokenKind::Identifier, None)?.text.clone();
+
+        // Params
+        let mut params: Vec<(String, types::Type)> = Vec::new();
+        self.consume(TokenKind::Punctuation, Some("("))?;
+        while self.peek().text != ")" {
+            let param_name = self.consume(TokenKind::Identifier, None)?.text.clone();
+            self.consume(TokenKind::Punctuation, Some(":"))?;
+            let param_type = self.parse_type()?;
+
+            params.push((param_name, param_type));
+
+            if self.peek().text == "," {
+                self.consume(TokenKind::Punctuation, Some(","))?;
+            }
+        }
+        self.consume(TokenKind::Punctuation, Some(")"))?;
+
+        // Return type
+        let mut return_type: Option<types::Type> = None;
+        if self.peek().text == ":" {
+            self.consume(TokenKind::Punctuation, Some(":"))?;
+            return_type = Some(self.parse_type()?);
+        }
+
+        // Body
+        let body = self.parse_block()?;
+
+        Ok(ast::FunctionDeclaration {
+            name,
+            params,
+            body: Box::new(body),
+            return_type,
         })
     }
 
@@ -212,6 +254,7 @@ impl Parser {
             TokenKind::Keyword if self.peek().text.as_str() == "while" => {
                 return self.parse_while();
             }
+            TokenKind::Keyword if self.peek().text == "return" => self.parse_return(),
             _ => {
                 return Err(format!(
                     "{}: expected a literal, identifier, '(', 'if', '{{' or 'while' got {}",
@@ -378,6 +421,22 @@ impl Parser {
         })
     }
 
+    fn parse_return(&mut self) -> Result<ast::Expression, String> {
+        let loc = self
+            .consume(TokenKind::Keyword, Some("return"))?
+            .loc
+            .clone();
+        let value = self.parse_expression()?;
+
+        Ok(ast::Expression {
+            loc,
+            kind: ast::ExpressionKind::Return {
+                value: Box::new(value),
+            },
+            return_type: None,
+        })
+    }
+
     fn parse_operation(&mut self) -> Result<ast::Operation, String> {
         let token = self.consume(TokenKind::Operator, None)?;
         match token.text.as_str() {
@@ -495,6 +554,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ast::Module, String> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
     use crate::compiler::tokenizer::tests::*;
 
     pub fn eint(value: i128) -> ast::Expression {
@@ -650,6 +710,16 @@ pub mod tests {
                 .collect(),
             body: Box::new(body),
             return_type,
+        }
+    }
+
+    pub fn ereturn(value: ast::Expression) -> ast::Expression {
+        ast::Expression {
+            loc: loc(),
+            kind: ast::ExpressionKind::Return {
+                value: Box::new(value),
+            },
+            return_type: None,
         }
     }
 
@@ -953,10 +1023,15 @@ pub mod tests {
                 efunction(
                     "foo",
                     vec![("a", types::Type::Int)],
-                    eblock(vec![eide("a")]),
+                    eblock(vec![ereturn(eide("a"))]),
                     Some(types::Type::Int),
                 ),
-                efunction("main", vec![], eblock(vec![ecall("foo", vec![eint(1)])]), None)
+                efunction(
+                    "main",
+                    vec![],
+                    eblock(vec![ecall("foo", vec![eint(1)])]),
+                    None
+                )
             ])
         );
     }
