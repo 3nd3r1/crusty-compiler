@@ -120,6 +120,7 @@ pub struct Module {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionDeclaration {
     pub name: String,
+    pub params: Vec<(String, Type)>,
     pub body: Box<Expression>,
     pub return_type: Option<Type>,
 }
