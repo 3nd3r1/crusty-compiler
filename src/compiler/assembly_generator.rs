@@ -12,6 +12,13 @@ impl Locals {
         let mut var_to_location: HashMap<ir::IRVar, String> = HashMap::new();
         let mut stack_used: u32 = 0;
 
+        var_to_location.insert(
+            ir::IRVar {
+                name: "None".to_string(),
+            },
+            "$0".to_string(),
+        );
+
         for var in variables {
             stack_used += 1;
             var_to_location.insert(var, format!("-{}(%rbp)", stack_used * 8));
@@ -86,6 +93,7 @@ impl AssemblyGenerator {
         self.emit("pushq %rbp");
         self.emit("movq %rsp, %rbp");
         self.emit(&format!("subq ${}, %rsp", locals.stack_used * 8));
+        self.emit("");
 
         for instr in &function_ir.instructions {
             self.emit(&format!("# {}", instr));
@@ -150,16 +158,20 @@ impl AssemblyGenerator {
 
                     self.emit(&format!("movq %rax, {}", dest_ref));
                 }
-                ir::InstructionKind::Return { .. } => todo!(),
+                ir::InstructionKind::Return { value } => {
+                    let value_ref = if let Some(value) = value {
+                        locals.get_ref(value)?
+                    } else {
+                        "$0".to_string()
+                    };
+                    self.emit(&format!("movq {}, %rax", value_ref));
+                    self.emit("movq %rbp, %rsp");
+                    self.emit("popq %rbp");
+                    self.emit("ret");
+                }
             }
             self.emit("");
         }
-
-        self.emit("# Return(None)");
-        self.emit("movq $0, %rax");
-        self.emit("movq %rbp, %rsp");
-        self.emit("popq %rbp");
-        self.emit("ret");
 
         Ok(())
     }
@@ -313,8 +325,13 @@ mod tests {
              movq $0, %rax\n\
              movq %rbp, %rsp\n\
              popq %rbp\n\
-             ret"
+             ret\n"
         });
+        let body_section = if body.is_empty() {
+            String::new()
+        } else {
+            format!("{}\n", body)
+        };
         format!(
             "# {}()\n\
              .global {}\n\
@@ -323,10 +340,10 @@ mod tests {
              pushq %rbp\n\
              movq %rsp, %rbp\n\
              subq ${}, %rsp\n\
-             {}\n\
-             {}\n\
+             \n\
+             {}{}\n\
             ",
-            name, name, name, name, stack_used, body, return_body
+            name, name, name, name, stack_used, body_section, return_body
         )
     }
 
@@ -360,6 +377,7 @@ mod tests {
                 icopy("x4", "x2"),
                 ilabel("if_end"),
                 iprint_int("x2", "x5"),
+                ireturn(None),
             ])
             .unwrap(),
             make_main(
@@ -413,7 +431,7 @@ mod tests {
             generate_assembly(vec![
                 ir::FunctionIR {
                     name: "foo".to_string(),
-                    instructions: vec![icopy("a", "x")],
+                    instructions: vec![ireturn(Some("a"))],
                 },
                 ir::FunctionIR {
                     name: "main".to_string(),
@@ -421,6 +439,7 @@ mod tests {
                         ilic(1, "x"),
                         icall("foo", vec!["x"], "x2"),
                         iprint_int("x2", "x3"),
+                        ireturn(None),
                     ],
                 },
             ])
@@ -436,7 +455,7 @@ mod tests {
                      movq -8(%rbp), %rax\n\
                      movq %rbp, %rsp\n\
                      popq %rbp\n\
-                     ret"
+                     ret\n"
                     )
                 ),
                 make_fn(
@@ -464,7 +483,12 @@ mod tests {
     #[test]
     fn test_assembly_generator_call() {
         assert_assembly_eq(
-            ga(vec![ilic(42, "a"), icall("my_func", vec!["a"], "res")]).unwrap(),
+            ga(vec![
+                ilic(42, "a"),
+                icall("my_func", vec!["a"], "res"),
+                ireturn(None),
+            ])
+            .unwrap(),
             make_main(
                 16,
                 "# LoadIntConst(42, a)\n\
