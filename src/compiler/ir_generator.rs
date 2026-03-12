@@ -659,6 +659,26 @@ pub mod tests {
     }
 
     #[test]
+    fn test_ir_generator_function_type_var() {
+        assert_ir_eq(
+            gi(
+                eblock(vec![
+                    evar("x", eide("print_int"), None),
+                    ecall("x", vec![eint(4)]),
+                ]),
+                None,
+            )
+            .unwrap(),
+            vec![
+                icopy("print_int", "x"),
+                ilic(4, "x2"),
+                icall("x", vec!["x2"], "x3"),
+                ireturn(None),
+            ],
+        );
+    }
+
+    #[test]
     fn test_ir_generator_short_circuit() {
         assert_ir_eq(
             gi(eif(eand(ebool(false), ebool(true)), eint(1), None), None).unwrap(),
