@@ -20,3 +20,13 @@ prints 8
 prints 4
 prints 2
 prints 1
+---
+fun f(n: Int): Int {
+  if n > 5 then {
+    return 5;
+  }
+  123
+}
+
+f(10)
+prints 5
