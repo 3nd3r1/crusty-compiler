@@ -31,6 +31,10 @@ impl<V: Clone> SymTab<V> {
         }
     }
 
+    pub fn contains(&self, identifier: &str) -> bool {
+        self.locals.contains_key(identifier)
+    }
+
     pub fn declare(&mut self, identifier: &str, value: V) -> Result<(), String> {
         if self.locals.contains_key(identifier) {
             Err(format!("identifier {} already declared", identifier))
