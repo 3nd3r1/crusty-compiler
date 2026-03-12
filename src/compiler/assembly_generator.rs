@@ -104,6 +104,22 @@ impl AssemblyGenerator {
         self.emit(&format!("{}:", function_ir.name));
         self.emit("pushq %rbp");
         self.emit("movq %rsp, %rbp");
+
+        let mut arg_refs = Vec::new();
+        for arg in &function_ir.arguments {
+            arg_refs.push(locals.get_ref(arg)?);
+        }
+        let arg_registers = vec!["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"];
+        if arg_registers.len() < function_ir.arguments.len() {
+            return Err(format!(
+                "more than {} args is not supported",
+                arg_registers.len()
+            ));
+        }
+        for (arg_ref, arg_register) in arg_refs.into_iter().zip(arg_registers.iter()) {
+            self.emit(&format!("movq {}, {}", arg_register, arg_ref));
+        }
+
         self.emit(&format!("subq ${}, %rsp", locals.stack_used * 8));
         self.emit("");
 
