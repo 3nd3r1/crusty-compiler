@@ -697,6 +697,48 @@ pub mod tests {
     }
 
     #[test]
+    fn test_ir_generator_f_plus_one() {
+        let mut module = emodule(vec![
+            efunction(
+                "f",
+                vec![("x", Type::Int)],
+                ereturn(eadd(eide("x"), eint(1))),
+                Some(Type::Int),
+            ),
+            efunction(
+                "main",
+                vec![],
+                ewithtype(ecall("f", vec![eint(3)]), Type::Int),
+                None,
+            ),
+        ]);
+
+        let function_irs = generate_ir(&mut module).unwrap();
+
+        assert_eq!(function_irs.len(), 2);
+        assert_eq!(function_irs[0].name, "f");
+        assert_eq!(function_irs[1].name, "main");
+
+        assert_ir_eq(
+            function_irs[0].instructions.clone(),
+            vec![
+                ilic(1, "x2"),
+                icall("+", vec!["x", "x2"], "x3"),
+                ireturn(Some("x3")),
+            ],
+        );
+        assert_ir_eq(
+            function_irs[1].instructions.clone(),
+            vec![
+                ilic(3, "x"),
+                icall("f", vec!["x"], "x2"),
+                iprint_int("x2", "x3"),
+                ireturn(None),
+            ],
+        );
+    }
+
+    #[test]
     fn test_ir_generator_short_circuit() {
         assert_ir_eq(
             gi(eif(eand(ebool(false), ebool(true)), eint(1), None), None).unwrap(),
