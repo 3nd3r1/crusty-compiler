@@ -524,6 +524,9 @@ impl Parser {
             ast::ExpressionKind::VarDeclaration { value, .. } => {
                 matches!(value.kind, ast::ExpressionKind::Block { .. })
             }
+            ast::ExpressionKind::BinaryOp { right, .. } => {
+                matches!(right.kind, ast::ExpressionKind::Block { .. })
+            }
             _ => false,
         }
     }
