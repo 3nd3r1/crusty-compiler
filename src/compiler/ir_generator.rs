@@ -82,6 +82,7 @@ impl IrGenerator {
             self.emit(ir::Instruction::ret(None, main.body.loc.clone()));
             function_irs.push(ir::FunctionIR {
                 name: main.name.clone(),
+                arguments: Vec::new(),
                 instructions: std::mem::take(&mut self.instructions),
             });
         } else {
@@ -127,6 +128,13 @@ impl IrGenerator {
         self.symtab = old_symtab;
         Ok(ir::FunctionIR {
             name: function.name.clone(),
+            arguments: function
+                .params
+                .iter()
+                .map(|(p_name, _)| ir::IRVar {
+                    name: p_name.clone(),
+                })
+                .collect(),
             instructions: std::mem::take(&mut self.instructions),
         })
     }
