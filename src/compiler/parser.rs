@@ -19,18 +19,23 @@ impl Parser {
         let token = &self.tokens[self.pos];
 
         if token.kind != token_kind {
-            return Err(format!(
-                "{}: expected {:?} got {:?}",
-                token.loc, token_kind, token.kind
-            ));
+            return Err(if let Some(expected) = expected {
+                format!(
+                    "{}: expected {}('{}') got {}",
+                    token.loc, token_kind, expected, token
+                )
+            } else {
+                format!("{}: expected {} got {}", token.loc, token_kind, token)
+            });
         }
 
         if expected.is_some_and(|value| token.text != value) {
             return Err(format!(
-                "{}: expected '{}' got '{}'",
+                "{}: expected {}('{}') got {}",
                 token.loc,
+                token_kind,
                 expected.unwrap(),
-                token.text
+                token
             ));
         }
 
