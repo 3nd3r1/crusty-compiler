@@ -176,8 +176,16 @@ fn typecheck_node(
         }
         ast::ExpressionKind::Assignment { name, right } => {
             let value_type = typecheck_node(&mut *right, symtab, return_type)?;
-            symtab.borrow_mut().assign(name, value_type.clone())?;
-            Ok(value_type)
+            let declared_type = symtab.borrow().lookup(name)?;
+            if value_type != declared_type {
+                Err(format!(
+                    "{}: cannot assign {} to variable {} of type {}",
+                    node.loc, value_type, name, declared_type
+                ))
+            } else {
+                symtab.borrow_mut().assign(name, value_type.clone())?;
+                Ok(value_type)
+            }
         }
         ast::ExpressionKind::Block { expressions } => {
             let block_symtab = Rc::new(RefCell::new(TypeSymTab {
