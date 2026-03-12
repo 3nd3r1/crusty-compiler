@@ -60,6 +60,15 @@ impl IrGenerator {
     fn generate(&mut self, module: &mut ast::Module) -> Result<Vec<ir::FunctionIR>, String> {
         let mut function_irs = Vec::new();
         if let Some((main, functions)) = module.functions.split_last_mut() {
+
+            for function in functions.iter() {
+                self.symtab.borrow_mut().declare(
+                    &function.name.clone(),
+                    ir::IRVar {
+                        name: function.name.clone(),
+                    },
+                )?;
+            }
             for function in functions {
                 function_irs.push(self.generate_function(function)?);
             }
@@ -95,12 +104,6 @@ impl IrGenerator {
         &mut self,
         function: &mut ast::FunctionDeclaration,
     ) -> Result<ir::FunctionIR, String> {
-        self.symtab.borrow_mut().declare(
-            &function.name.clone(),
-            ir::IRVar {
-                name: function.name.clone(),
-            },
-        )?;
         let old_symtab = Rc::clone(&self.symtab);
         self.symtab = Rc::new(RefCell::new(IrSymTab {
             locals: function
