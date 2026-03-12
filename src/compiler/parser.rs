@@ -1045,6 +1045,43 @@ pub mod tests {
     }
 
     #[test]
+    fn test_parser_function_type_var() {
+        assert_eq!(
+            parse(vec![
+                tkeyw("var"),
+                tide("x"),
+                tpunc(":"),
+                tpunc("("),
+                tide("Int"),
+                tpunc(")"),
+                tope("="),
+                tope(">"),
+                tide("Unit"),
+                tope("="),
+                tide("print_int"),
+                tpunc(";"),
+                tide("x"),
+                tpunc("("),
+                tint("4"),
+                tpunc(")"),
+                tend()
+            ])
+            .unwrap(),
+            emain(vec![
+                evar(
+                    "x",
+                    eide("print_int"),
+                    Some(types::Type::Function {
+                        params: vec![types::Type::Int],
+                        return_type: Box::new(types::Type::Unit),
+                    })
+                ),
+                ecall("x", vec![eint(4)])
+            ])
+        );
+    }
+
+    #[test]
     fn test_parser_assignment() {
         assert_eq!(
             parse(vec![tide("a"), tope("="), tint("3"), tend()]).unwrap(),
