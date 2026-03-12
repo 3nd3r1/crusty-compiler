@@ -73,7 +73,7 @@ fn run_test_case(case: TestCase) -> Result<(), Failed> {
     let tmp_dir = tempfile::TempDir::new().map_err(|e| e.to_string())?;
     let path = tmp_dir.path().join("a.out");
 
-    let executable = compilers_project::compile(&case.source, Some(tmp_dir.path()))
+    let executable = crusty_compiler::compile(&case.source, Some(tmp_dir.path()))
         .map_err(|e| format!("Compilation failed: {}", e))?;
 
     fs::write(&path, &executable).map_err(|e| e.to_string())?;

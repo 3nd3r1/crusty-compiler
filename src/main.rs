@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use clap_stdin::FileOrStdin;
-use compilers_project::compile;
+use crusty_compiler::compile;
 use std::fs;
 
 #[derive(Parser)]
