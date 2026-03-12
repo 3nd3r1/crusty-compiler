@@ -344,31 +344,36 @@ mod tests {
         pretty_assertions::assert_eq!(left, right);
     }
 
-    fn make_fn(name: &str, stack_used: u32, body: &str, return_body: Option<&str>) -> String {
-        let return_body = return_body.unwrap_or_else(|| {
+    fn make_fn(
+        name: &str,
+        stack_used: u32,
+        params_body: Option<&str>,
+        body: Option<&str>,
+        return_body: Option<&str>,
+    ) -> String {
+        let params_body = params_body.unwrap_or("");
+        let body = body.unwrap_or("");
+        let return_body = return_body.unwrap_or(
             "# Return(None)\n\
              movq $0, %rax\n\
              movq %rbp, %rsp\n\
              popq %rbp\n\
-             ret\n"
-        });
-        let body_section = if body.is_empty() {
-            String::new()
-        } else {
-            format!("{}\n", body)
-        };
+             ret\n",
+        );
+
         format!(
-            "# {}()\n\
-             .global {}\n\
-             .type {}, @function\n\
-             {}:\n\
+            "# {name}()\n\
+             .global {name}\n\
+             .type {name}, @function\n\
+             {name}:\n\
              pushq %rbp\n\
              movq %rsp, %rbp\n\
-             subq ${}, %rsp\n\
+             {params_body}\
+             subq ${stack_used}, %rsp\n\
              \n\
-             {}{}\n\
-            ",
-            name, name, name, name, stack_used, body_section, return_body
+             {body}\
+             {return_body}\n\
+            "
         )
     }
 
@@ -384,7 +389,7 @@ mod tests {
     }
 
     fn make_main(stack_used: u32, body: &str) -> String {
-        make_asm(&make_fn("main", stack_used, body, None))
+        make_asm(&make_fn("main", stack_used, None, Some(body), None))
     }
 
     #[test]
@@ -446,7 +451,7 @@ mod tests {
                  movq -24(%rbp), %rdi\n\
                  callq print_int\n\
                  movq %rax, -40(%rbp)\n\
-                 add $8, %rsp\n\
+                 add $8, %rsp\n\n\
                  ",
             ),
         )
@@ -476,7 +481,8 @@ mod tests {
                 make_fn(
                     "foo",
                     8,
-                    "",
+                    Some("movq %rdi, -8(%rbp)\n"),
+                    None,
                     Some(
                         "# Return(a)\n\
                      movq -8(%rbp), %rax\n\
@@ -488,7 +494,9 @@ mod tests {
                 make_fn(
                     "main",
                     24,
-                    "# LoadIntConst(1, x)\n\
+                    None,
+                    Some(
+                        "# LoadIntConst(1, x)\n\
                      movq $1, -8(%rbp)\n\
                      \n\
                      # Call(foo, [x], x2)\n\
@@ -503,8 +511,9 @@ mod tests {
                      movq -16(%rbp), %rdi\n\
                      callq print_int\n\
                      movq %rax, -24(%rbp)\n\
-                     add $8, %rsp\n\
-                     ",
+                     add $8, %rsp\n\n\
+                     "
+                    ),
                     None
                 )
             )),
@@ -535,7 +544,7 @@ mod tests {
                  movq -16(%rbp), %rdi\n\
                  callq *-8(%rbp)\n\
                  movq %rax, -24(%rbp)\n\
-                 add $8, %rsp\n\
+                 add $8, %rsp\n\n\
                  ",
             ),
         )
@@ -558,7 +567,7 @@ mod tests {
                  # Call(my_func, [a], res)\n\
                  movq -8(%rbp), %rdi\n\
                  callq my_func\n\
-                 movq %rax, -16(%rbp)\n\
+                 movq %rax, -16(%rbp)\n\n\
                  ",
             ),
         )
