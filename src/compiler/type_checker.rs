@@ -433,6 +433,25 @@ mod tests {
     }
 
     #[test]
+    fn test_typechecker_function_type_var() {
+        assert_eq!(
+            tc(eblock(vec![
+                evar(
+                    "x",
+                    eide("print_int"),
+                    Some(Type::Function {
+                        params: vec![Type::Int],
+                        return_type: Box::new(Type::Unit),
+                    })
+                ),
+                ecall("x", vec![eint(4)])
+            ]))
+            .unwrap(),
+            Type::Unit
+        );
+    }
+
+    #[test]
     fn test_typechecker_while() {
         assert_eq!(
             tc(eblock(vec![
