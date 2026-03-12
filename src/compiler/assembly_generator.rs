@@ -481,6 +481,36 @@ mod tests {
     }
 
     #[test]
+    fn test_assembly_generator_function_type_var() {
+        assert_assembly_eq(
+            ga(vec![
+                icopy("print_int", "x"),
+                ilic(4, "x2"),
+                icall("x", vec!["x2"], "x3"),
+                ireturn(None),
+            ])
+            .unwrap(),
+            make_main(
+                24,
+                "# Copy(print_int, x)\n\
+                 movq $print_int, %rax\n\
+                 movq %rax, -8(%rbp)\n\
+                 \n\
+                 # LoadIntConst(4, x2)\n\
+                 movq $4, -16(%rbp)\n\
+                 \n\
+                 # Call(x, [x2], x3)\n\
+                 subq $8, %rsp\n\
+                 movq -16(%rbp), %rdi\n\
+                 callq *-8(%rbp)\n\
+                 movq %rax, -24(%rbp)\n\
+                 add $8, %rsp\n\
+                 ",
+            ),
+        )
+    }
+
+    #[test]
     fn test_assembly_generator_call() {
         assert_assembly_eq(
             ga(vec![
