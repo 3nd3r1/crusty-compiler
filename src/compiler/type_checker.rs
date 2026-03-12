@@ -21,7 +21,7 @@ pub fn typecheck(module: &mut ast::Module) -> Result<Type, String> {
                         .collect(),
                     return_type: Box::new(function.return_type.clone()),
                 },
-            );
+            )?;
             let func_symtab = Rc::new(RefCell::new(TypeSymTab {
                 locals: function
                     .params
@@ -168,9 +168,9 @@ fn typecheck_node(
                 }
                 symtab
                     .borrow_mut()
-                    .declare(name, value_type.as_ref().clone());
+                    .declare(name, value_type.as_ref().clone())?;
             } else {
-                symtab.borrow_mut().declare(name, actual_value_type);
+                symtab.borrow_mut().declare(name, actual_value_type)?;
             }
             Ok(Type::Unit)
         }

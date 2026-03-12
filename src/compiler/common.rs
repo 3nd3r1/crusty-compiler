@@ -31,8 +31,13 @@ impl<V: Clone> SymTab<V> {
         }
     }
 
-    pub fn declare(&mut self, identifier: &str, value: V) {
-        self.locals.insert(identifier.to_string(), value);
+    pub fn declare(&mut self, identifier: &str, value: V) -> Result<(), String> {
+        if self.locals.contains_key(identifier) {
+            Err(format!("identifier {} already declared", identifier))
+        } else {
+            self.locals.insert(identifier.to_string(), value);
+            Ok(())
+        }
     }
 
     pub fn assign(&mut self, identifier: &str, value: V) -> Result<(), String> {

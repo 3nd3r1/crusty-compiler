@@ -94,7 +94,7 @@ fn interpret_node(
             value_type: _,
         } => {
             let value = interpret_node(&*value, symtab)?;
-            symtab.borrow_mut().declare(name, value);
+            symtab.borrow_mut().declare(name, value)?;
             Ok(Value::None)
         }
         ast::ExpressionKind::Assignment { name, right } => {

@@ -100,7 +100,7 @@ impl IrGenerator {
             ir::IRVar {
                 name: function.name.clone(),
             },
-        );
+        )?;
         let old_symtab = Rc::clone(&self.symtab);
         self.symtab = Rc::new(RefCell::new(IrSymTab {
             locals: function
@@ -299,7 +299,7 @@ impl IrGenerator {
                 let var_value = self.visit(&mut *value)?;
                 let var_var = self.new_var();
 
-                self.symtab.borrow_mut().declare(name, var_var.clone());
+                self.symtab.borrow_mut().declare(name, var_var.clone())?;
                 self.emit(ir::Instruction::copy(
                     var_value,
                     var_var.clone(),
@@ -427,7 +427,7 @@ pub fn generate_ir(module: &mut ast::Module) -> Result<Vec<ir::FunctionIR>, Stri
         parent: None,
     };
     for name in reserved_names {
-        root_symtab.declare(&name, ir::IRVar { name: name.clone() });
+        root_symtab.declare(&name, ir::IRVar { name: name.clone() })?;
     }
 
     IrGenerator::new(root_symtab).generate(module)
