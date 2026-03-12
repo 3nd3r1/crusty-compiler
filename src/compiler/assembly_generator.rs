@@ -12,16 +12,28 @@ impl Locals {
         let mut var_to_location: HashMap<ir::IRVar, String> = HashMap::new();
         let mut stack_used: u32 = 0;
 
-        var_to_location.insert(
-            ir::IRVar {
-                name: "None".to_string(),
-            },
-            "$0".to_string(),
-        );
+        let builtin_vars = vec![
+            ("None", "$0"),
+            ("print_int", "$print_int"),
+            ("print_bool", "$print_bool"),
+            ("read_int", "$read_int"),
+            ("read_bool", "$read_bool"),
+        ];
+
+        for (name, location) in builtin_vars {
+            var_to_location.insert(
+                ir::IRVar {
+                    name: name.to_string(),
+                },
+                location.to_string(),
+            );
+        }
 
         for var in variables {
-            stack_used += 1;
-            var_to_location.insert(var, format!("-{}(%rbp)", stack_used * 8));
+            if !var_to_location.contains_key(&var) {
+                stack_used += 1;
+                var_to_location.insert(var, format!("-{}(%rbp)", stack_used * 8));
+            }
         }
 
         Self {
@@ -134,6 +146,9 @@ impl AssemblyGenerator {
                     self.emit(&format!("jmp .L{}", else_label.name));
                 }
                 ir::InstructionKind::Call { fun, args, dest } => {
+                    if locals.stack_used % 2 != 0 {
+                        self.emit("subq $8, %rsp");
+                    }
                     let dest_ref = locals.get_ref(dest)?;
                     let mut arg_refs = Vec::new();
                     for arg in args {
@@ -153,10 +168,20 @@ impl AssemblyGenerator {
                         for (arg_ref, arg_register) in arg_refs.iter().zip(arg_registers.iter()) {
                             self.emit(&format!("movq {}, {}", arg_ref, arg_register));
                         }
-                        self.emit(&format!("callq {}", fun.name));
+
+                        let fun_ref = match locals.get_ref(fun) {
+                            Ok(r) if r.starts_with("$") => r[1..].to_string(),
+                            Ok(r) => format!("*{}", r),
+                            Err(_) => fun.name.clone(),
+                        };
+
+                        self.emit(&format!("callq {}", fun_ref));
                     }
 
                     self.emit(&format!("movq %rax, {}", dest_ref));
+                    if locals.stack_used % 2 != 0 {
+                        self.emit("add $8, %rsp");
+                    }
                 }
                 ir::InstructionKind::Return { value } => {
                     let value_ref = if let Some(value) = value {
@@ -417,9 +442,11 @@ mod tests {
                  .Lif_end:\n\
                  \n\
                  # Call(print_int, [x2], x5)\n\
+                 subq $8, %rsp\n\
                  movq -24(%rbp), %rdi\n\
                  callq print_int\n\
                  movq %rax, -40(%rbp)\n\
+                 add $8, %rsp\n\
                  ",
             ),
         )
@@ -465,14 +492,18 @@ mod tests {
                      movq $1, -8(%rbp)\n\
                      \n\
                      # Call(foo, [x], x2)\n\
+                     subq $8, %rsp\n\
                      movq -8(%rbp), %rdi\n\
                      callq foo\n\
                      movq %rax, -16(%rbp)\n\
+                     add $8, %rsp\n\
                      \n\
                      # Call(print_int, [x2], x3)\n\
+                     subq $8, %rsp\n\
                      movq -16(%rbp), %rdi\n\
                      callq print_int\n\
                      movq %rax, -24(%rbp)\n\
+                     add $8, %rsp\n\
                      ",
                     None
                 )
