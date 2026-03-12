@@ -120,6 +120,10 @@ impl IrGenerator {
         self.instructions = Vec::new();
         self.visit(&mut function.body)?;
 
+        if function.return_type == Type::Unit {
+            self.emit(ir::Instruction::ret(None, function.body.loc.clone()));
+        }
+
         self.symtab = old_symtab;
         Ok(ir::FunctionIR {
             name: function.name.clone(),
@@ -646,7 +650,10 @@ pub mod tests {
         assert_eq!(function_irs[0].name, "foo");
         assert_eq!(function_irs[1].name, "main");
 
-        assert_ir_eq(function_irs[0].instructions.clone(), vec![ireturn(Some("a"))]);
+        assert_ir_eq(
+            function_irs[0].instructions.clone(),
+            vec![ireturn(Some("a"))],
+        );
         assert_ir_eq(
             function_irs[1].instructions.clone(),
             vec![
