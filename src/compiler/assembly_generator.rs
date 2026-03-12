@@ -331,11 +331,12 @@ mod intrinsics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::compiler::ir_generator::tests::*;
+    use crate::compiler::{ir::IRVar, ir_generator::tests::*};
 
     fn ga(instructions: Vec<ir::Instruction>) -> Result<String, String> {
         generate_assembly(vec![ir::FunctionIR {
             name: "main".to_string(),
+            arguments: Vec::new(),
             instructions,
         }])
     }
@@ -463,10 +464,14 @@ mod tests {
             generate_assembly(vec![
                 ir::FunctionIR {
                     name: "foo".to_string(),
+                    arguments: vec![IRVar {
+                        name: "a".to_string(),
+                    }],
                     instructions: vec![ireturn(Some("a"))],
                 },
                 ir::FunctionIR {
                     name: "main".to_string(),
+                    arguments: Vec::new(),
                     instructions: vec![
                         ilic(1, "x"),
                         icall("foo", vec!["x"], "x2"),
