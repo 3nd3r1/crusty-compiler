@@ -13,7 +13,7 @@ pub fn tokenize(source_code: &str) -> Result<Vec<Token>, String> {
     let punctuation = Regex::new(r"^[:;,\(\){}]").unwrap();
 
     let comment = Regex::new(r"^(//|\#)[^\n]*").unwrap();
-    let multi_line_comment = Regex::new(r"^/\*[\s\S]*\*/").unwrap();
+    let multi_line_comment = Regex::new(r"^/\*[\s\S]*?\*/").unwrap();
     let whitespace = Regex::new(r"^\s+").unwrap();
 
     let null_patterns = vec![comment, multi_line_comment, whitespace];
