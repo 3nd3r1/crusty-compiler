@@ -30,3 +30,25 @@ fun f(n: Int): Int {
 
 f(10)
 prints 5
+---
+fun f(x: Int): Int {
+    return g(x + 1);
+}
+fun g(x: Int): Int {
+    print_int(x);
+    if x < 5 then {
+        return f(x);
+    } else {
+        return x;
+    }
+}
+f(1) * 100
+prints 2
+prints 3
+prints 4
+prints 5
+prints 500
+---
+fun f(x: Int): Int { return x+1; }
+f(3)
+prints 4
