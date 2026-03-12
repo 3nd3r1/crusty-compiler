@@ -10,7 +10,8 @@ pub fn typecheck(module: &mut ast::Module) -> Result<Type, String> {
             locals: builtin_types::build_builtin_types(),
             parent: None,
         }));
-        for function in functions {
+
+        for function in functions.iter() {
             root_symtab.borrow_mut().declare(
                 &function.name,
                 Type::Function {
@@ -22,6 +23,9 @@ pub fn typecheck(module: &mut ast::Module) -> Result<Type, String> {
                     return_type: Box::new(function.return_type.clone()),
                 },
             )?;
+        }
+
+        for function in functions {
             let func_symtab = Rc::new(RefCell::new(TypeSymTab {
                 locals: function
                     .params
