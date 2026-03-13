@@ -723,7 +723,7 @@ pub mod tests {
             efunction(
                 "f",
                 vec![("x", Type::Int)],
-                ereturn(eadd(eide("x"), eint(1))),
+                eblock(vec![ereturn(eadd(eide("x"), eint(1)))]),
                 Some(Type::Int),
             ),
             efunction(
@@ -739,7 +739,12 @@ pub mod tests {
         assert_eq!(function_irs.len(), 2);
         assert_eq!(function_irs[0].name, "f");
         assert_eq!(function_irs[1].name, "main");
-        assert_eq!(function_irs[0].arguments, vec![ir::IRVar { name: "x".to_string() }]);
+        assert_eq!(
+            function_irs[0].arguments,
+            vec![ir::IRVar {
+                name: "x".to_string()
+            }]
+        );
 
         assert_ir_eq(
             function_irs[0].instructions.clone(),
