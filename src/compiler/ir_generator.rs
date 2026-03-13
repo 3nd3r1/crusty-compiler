@@ -28,10 +28,21 @@ impl IrGenerator {
     fn new_var(&mut self) -> ir::IRVar {
         self.var_counter += 1;
         if self.var_counter == 1 {
-            ir::IRVar {
-                name: "x".to_string(),
+            if !self.symtab.borrow().contains("x") {
+                ir::IRVar {
+                    name: "x".to_string(),
+                }
+            } else {
+                self.new_var()
             }
         } else {
+            while self
+                .symtab
+                .borrow()
+                .contains(&format!("x{}", self.var_counter))
+            {
+                self.var_counter += 1;
+            }
             ir::IRVar {
                 name: format!("x{}", self.var_counter),
             }
@@ -60,7 +71,6 @@ impl IrGenerator {
     fn generate(&mut self, module: &mut ast::Module) -> Result<Vec<ir::FunctionIR>, String> {
         let mut function_irs = Vec::new();
         if let Some((main, functions)) = module.functions.split_last_mut() {
-
             for function in functions.iter() {
                 self.symtab.borrow_mut().declare(
                     &function.name.clone(),
@@ -72,7 +82,16 @@ impl IrGenerator {
             for function in functions {
                 function_irs.push(self.generate_function(function)?);
             }
+
+            // Generate main
+            let old_symtab = Rc::clone(&self.symtab);
+            self.symtab = Rc::new(RefCell::new(IrSymTab {
+                locals: HashMap::new(),
+                parent: Some(Rc::clone(&self.symtab)),
+            }));
+
             self.instructions = Vec::new();
+            self.var_counter = 0;
             let var_main_result = self.visit(&mut main.body)?;
             if let Some(print_fn) = match &main.body.return_type {
                 Some(Type::Int) => Some("print_int"),
@@ -89,6 +108,8 @@ impl IrGenerator {
                 ));
             }
             self.emit(ir::Instruction::ret(None, main.body.loc.clone()));
+            self.symtab = old_symtab;
+
             function_irs.push(ir::FunctionIR {
                 name: main.name.clone(),
                 arguments: Vec::new(),
@@ -104,6 +125,7 @@ impl IrGenerator {
         &mut self,
         function: &mut ast::FunctionDeclaration,
     ) -> Result<ir::FunctionIR, String> {
+        self.var_counter = 0;
         let old_symtab = Rc::clone(&self.symtab);
         self.symtab = Rc::new(RefCell::new(IrSymTab {
             locals: function
@@ -441,6 +463,7 @@ pub mod tests {
     use super::*;
     use crate::compiler::parser::tests::*;
     use crate::compiler::tokenizer::tests::loc;
+    use pretty_assertions::assert_eq;
 
     fn gi(
         mut node: ast::Expression,
@@ -452,18 +475,16 @@ pub mod tests {
     }
 
     fn assert_ir_eq(left: Vec<ir::Instruction>, right: Vec<ir::Instruction>) {
-        assert!(
-            left == right,
-            "expected:\n{}\ngot:\n{}\n",
-            right
-                .iter()
-                .map(|i| format!("{}", i))
-                .collect::<Vec<_>>()
-                .join("\n"),
+        assert_eq!(
             left.iter()
                 .map(|i| format!("{}", i))
                 .collect::<Vec<_>>()
                 .join("\n"),
+            right
+                .iter()
+                .map(|i| format!("{}", i))
+                .collect::<Vec<_>>()
+                .join("\n")
         )
     }
 
@@ -718,6 +739,7 @@ pub mod tests {
         assert_eq!(function_irs.len(), 2);
         assert_eq!(function_irs[0].name, "f");
         assert_eq!(function_irs[1].name, "main");
+        assert_eq!(function_irs[0].arguments, vec![ir::IRVar { name: "x".to_string() }]);
 
         assert_ir_eq(
             function_irs[0].instructions.clone(),
