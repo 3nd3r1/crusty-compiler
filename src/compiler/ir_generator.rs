@@ -128,20 +128,18 @@ impl IrGenerator {
         self.var_counter = 0;
         let old_symtab = Rc::clone(&self.symtab);
         self.symtab = Rc::new(RefCell::new(IrSymTab {
-            locals: function
-                .params
-                .iter()
-                .map(|(p_name, _)| {
-                    (
-                        p_name.clone(),
-                        ir::IRVar {
-                            name: p_name.clone(),
-                        },
-                    )
-                })
-                .collect(),
+            locals: HashMap::new(),
             parent: Some(Rc::clone(&self.symtab)),
         }));
+
+        for (p_name, _) in function.params.iter() {
+            self.symtab.borrow_mut().declare(
+                p_name,
+                ir::IRVar {
+                    name: p_name.clone(),
+                },
+            )?;
+        }
 
         self.instructions = Vec::new();
         self.visit(&mut function.body)?;
