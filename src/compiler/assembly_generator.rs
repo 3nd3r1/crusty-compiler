@@ -162,9 +162,6 @@ impl AssemblyGenerator {
                     self.emit(&format!("jmp .L{}", else_label.name));
                 }
                 ir::InstructionKind::Call { fun, args, dest } => {
-                    if locals.stack_used % 2 != 0 {
-                        self.emit("subq $8, %rsp");
-                    }
                     let dest_ref = locals.get_ref(dest)?;
                     let mut arg_refs = Vec::new();
                     for arg in args {
@@ -173,7 +170,11 @@ impl AssemblyGenerator {
 
                     if let Some(intrinsic_fun) = self.all_intrinsics.get(&fun.name) {
                         intrinsic_fun(arg_refs, "%rax".to_string(), &mut self.lines);
+                        self.emit(&format!("movq %rax, {}", dest_ref));
                     } else {
+                        if locals.stack_used % 2 != 0 {
+                            self.emit("subq $8, %rsp");
+                        }
                         let arg_registers = vec!["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"];
                         if arg_registers.len() < arg_refs.len() {
                             return Err(format!(
@@ -192,11 +193,10 @@ impl AssemblyGenerator {
                         };
 
                         self.emit(&format!("callq {}", fun_ref));
-                    }
-
-                    self.emit(&format!("movq %rax, {}", dest_ref));
-                    if locals.stack_used % 2 != 0 {
-                        self.emit("add $8, %rsp");
+                        self.emit(&format!("movq %rax, {}", dest_ref));
+                        if locals.stack_used % 2 != 0 {
+                            self.emit("add $8, %rsp");
+                        }
                     }
                 }
                 ir::InstructionKind::Return { value } => {
