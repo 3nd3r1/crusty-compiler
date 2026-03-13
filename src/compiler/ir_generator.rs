@@ -9,6 +9,7 @@ struct IrGenerator {
     symtab: Rc<RefCell<IrSymTab>>,
     var_counter: u32,
     label_counter: u32,
+    active_loop_labels: Option<(ir::Label, ir::Label)>,
 }
 
 impl IrGenerator {
@@ -18,6 +19,7 @@ impl IrGenerator {
             symtab: Rc::new(RefCell::new(root_symtab)),
             var_counter: 0,
             label_counter: 0,
+            active_loop_labels: None,
         }
     }
 
@@ -381,7 +383,9 @@ impl IrGenerator {
                 ));
                 self.emit(ir::Instruction::label(l_do, node.loc.clone()));
 
+                self.active_loop_labels = Some((l_start.clone(), l_end.clone()));
                 self.visit(&mut *do_expression)?;
+                self.active_loop_labels = None;
 
                 self.emit(ir::Instruction::jump(l_start.clone(), node.loc.clone()));
 
@@ -414,6 +418,28 @@ impl IrGenerator {
                     node.loc.clone(),
                 ));
                 Ok(var_result)
+            }
+            ast::ExpressionKind::Break {} => {
+                if let Some((_, l_end)) = &self.active_loop_labels {
+                    self.emit(ir::Instruction::jump(l_end.clone(), node.loc.clone()));
+                    Ok(self.unit_var())
+                } else {
+                    Err(format!(
+                        "{}: break can only be inside a loop",
+                        node.loc.clone()
+                    ))
+                }
+            }
+            ast::ExpressionKind::Continue {} => {
+                if let Some((l_start, _)) = &self.active_loop_labels {
+                    self.emit(ir::Instruction::jump(l_start.clone(), node.loc.clone()));
+                    Ok(self.unit_var())
+                } else {
+                    Err(format!(
+                        "{}: continue can only be inside a loop",
+                        node.loc.clone()
+                    ))
+                }
             }
         }
     }
