@@ -383,9 +383,10 @@ impl IrGenerator {
                 ));
                 self.emit(ir::Instruction::label(l_do, node.loc.clone()));
 
+                let old_active_loop_labels = self.active_loop_labels.clone();
                 self.active_loop_labels = Some((l_start.clone(), l_end.clone()));
                 self.visit(&mut *do_expression)?;
-                self.active_loop_labels = None;
+                self.active_loop_labels = old_active_loop_labels;
 
                 self.emit(ir::Instruction::jump(l_start.clone(), node.loc.clone()));
 
