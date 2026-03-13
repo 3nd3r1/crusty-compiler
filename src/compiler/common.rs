@@ -32,12 +32,23 @@ impl<V: Clone> SymTab<V> {
     }
 
     pub fn contains(&self, identifier: &str) -> bool {
-        self.locals.contains_key(identifier)
+        if self.locals.contains_key(identifier) {
+            true
+        } else {
+            if let Some(parent) = &self.parent {
+                parent.borrow().contains(identifier)
+            } else {
+                false
+            }
+        }
     }
 
     pub fn declare(&mut self, identifier: &str, value: V) -> Result<(), String> {
         if self.locals.contains_key(identifier) {
-            Err(format!("identifier {} already declared", identifier))
+            Err(format!(
+                "identifier {} already declared in current scope",
+                identifier
+            ))
         } else {
             self.locals.insert(identifier.to_string(), value);
             Ok(())
