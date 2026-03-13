@@ -133,6 +133,8 @@ fn interpret_node(
         }
         ast::ExpressionKind::FunctionCall { .. } => todo!(),
         ast::ExpressionKind::Return { .. } => todo!(),
+        ast::ExpressionKind::Break {} => todo!(),
+        ast::ExpressionKind::Continue {} => todo!(),
     }
 }
 
