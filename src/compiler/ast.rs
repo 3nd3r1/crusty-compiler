@@ -113,6 +113,8 @@ pub enum ExpressionKind {
     Return {
         value: Box<Expression>,
     },
+    Break {},
+    Continue {},
 }
 
 #[derive(Debug, Clone, PartialEq)]
