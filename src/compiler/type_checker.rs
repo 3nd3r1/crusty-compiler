@@ -274,6 +274,8 @@ fn typecheck_node(
                 ))
             }
         }
+        ast::ExpressionKind::Break {} => Ok(Type::Unit),
+        ast::ExpressionKind::Continue {} => Ok(Type::Unit),
     }?;
 
     node.return_type = Some(return_type.clone());
