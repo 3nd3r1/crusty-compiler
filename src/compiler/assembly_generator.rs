@@ -572,6 +572,87 @@ mod tests {
     }
 
     #[test]
+    fn test_assembly_generator_f_plus_one() {
+        assert_assembly_eq(
+            generate_assembly(vec![
+                ir::FunctionIR {
+                    name: "f".to_string(),
+                    arguments: vec![IRVar {
+                        name: "x".to_string(),
+                    }],
+                    instructions: vec![
+                        ilic(1, "x2"),
+                        icall("+", vec!["x", "x2"], "x3"),
+                        ireturn(Some("x3")),
+                    ],
+                },
+                ir::FunctionIR {
+                    name: "main".to_string(),
+                    arguments: Vec::new(),
+                    instructions: vec![
+                        ilic(3, "x"),
+                        icall("f", vec!["x"], "x2"),
+                        iprint_int("x2", "x3"),
+                        ireturn(None),
+                    ],
+                },
+            ])
+            .unwrap(),
+            make_asm(&format!(
+                "{}{}",
+                make_fn(
+                    "f",
+                    24,
+                    Some("movq %rdi, -16(%rbp)\n"),
+                    Some(
+                        "# LoadIntConst(1, x2)\n\
+                         movq $1, -8(%rbp)\n\
+                         \n\
+                         # Call(+, [x, x2], x3)\n\
+                         movq -16(%rbp), %rax\n\
+                         addq -8(%rbp), %rax\n\
+                         movq %rax, -24(%rbp)\n\
+                         \n\
+                         "
+                    ),
+                    Some(
+                        "# Return(x3)\n\
+                         movq -24(%rbp), %rax\n\
+                         movq %rbp, %rsp\n\
+                         popq %rbp\n\
+                         ret\n"
+                    )
+                ),
+                make_fn(
+                    "main",
+                    24,
+                    None,
+                    Some(
+                        "# LoadIntConst(3, x)\n\
+                         movq $3, -8(%rbp)\n\
+                         \n\
+                         # Call(f, [x], x2)\n\
+                         subq $8, %rsp\n\
+                         movq -8(%rbp), %rdi\n\
+                         callq f\n\
+                         movq %rax, -16(%rbp)\n\
+                         add $8, %rsp\n\
+                         \n\
+                         # Call(print_int, [x2], x3)\n\
+                         subq $8, %rsp\n\
+                         movq -16(%rbp), %rdi\n\
+                         callq print_int\n\
+                         movq %rax, -24(%rbp)\n\
+                         add $8, %rsp\n\n\
+                         "
+                    ),
+                    None
+                )
+            )),
+        );
+    }
+
+    #[test]
     fn test_assembly_generator_call() {
         assert_assembly_eq(
             ga(vec![
