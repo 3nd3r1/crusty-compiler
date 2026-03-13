@@ -260,9 +260,11 @@ impl Parser {
                 return self.parse_while();
             }
             TokenKind::Keyword if self.peek().text == "return" => self.parse_return(),
+            TokenKind::Keyword if self.peek().text == "break" => self.parse_break(),
+            TokenKind::Keyword if self.peek().text == "continue" => self.parse_continue(),
             _ => {
                 return Err(format!(
-                    "{}: expected a literal, identifier, '(', 'if', '{{' or 'while' got {}",
+                    "{}: expected a literal, identifier, '(', 'if', '{{', 'while', 'return', 'break' or 'continue' got {}",
                     self.peek().loc,
                     self.peek().text
                 ));
@@ -438,6 +440,27 @@ impl Parser {
             kind: ast::ExpressionKind::Return {
                 value: Box::new(value),
             },
+            return_type: None,
+        })
+    }
+
+    fn parse_break(&mut self) -> Result<ast::Expression, String> {
+        let loc = self.consume(TokenKind::Keyword, Some("break"))?.loc.clone();
+        Ok(ast::Expression {
+            loc,
+            kind: ast::ExpressionKind::Break {},
+            return_type: None,
+        })
+    }
+
+    fn parse_continue(&mut self) -> Result<ast::Expression, String> {
+        let loc = self
+            .consume(TokenKind::Keyword, Some("continue"))?
+            .loc
+            .clone();
+        Ok(ast::Expression {
+            loc,
+            kind: ast::ExpressionKind::Continue {},
             return_type: None,
         })
     }
