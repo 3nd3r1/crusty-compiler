@@ -809,7 +809,7 @@ pub mod tests {
         assert!(
             parse(vec![tpunc("{"), tint("1"), tide("a"), tpunc("}"), tend()])
                 .unwrap_err()
-                .contains("expected Punctuation got Identifier")
+                .contains("expected Punctuation('}') got Identifier(\"a\")")
         );
     }
 
