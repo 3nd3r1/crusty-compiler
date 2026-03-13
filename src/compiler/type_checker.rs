@@ -27,13 +27,12 @@ pub fn typecheck(module: &mut ast::Module) -> Result<Type, String> {
 
         for function in functions {
             let func_symtab = Rc::new(RefCell::new(TypeSymTab {
-                locals: function
-                    .params
-                    .iter()
-                    .map(|(p_name, p_type)| (p_name.clone(), p_type.clone()))
-                    .collect(),
+                locals: HashMap::new(),
                 parent: Some(Rc::clone(&root_symtab)),
             }));
+            for (p_name, p_type) in function.params.iter() {
+                func_symtab.borrow_mut().declare(p_name, p_type.clone())?;
+            }
 
             typecheck_node(
                 &mut *function.body,
