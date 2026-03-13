@@ -39,6 +39,6 @@ See the full [language specification](https://hy-compilers.github.io/spring-2026
 - [x] Type checker
 - [x] IR Generator
 - [x] Assembly Generator
-- [ ] Functions
-- [ ] break and continue
+- [x] Functions
+- [x] break and continue
 - [ ] Analysis & optimization
